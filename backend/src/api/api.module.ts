@@ -1,79 +1,79 @@
-import { DynamicModule, Module, Global, Provider } from '@nestjs/common';
-import { HttpModule, HttpService } from '@nestjs/axios';
-import { AsyncConfiguration, Configuration, ConfigurationFactory } from './configuration';
+// import { DynamicModule, Module, Global, Provider } from '@nestjs/common';
+// import { HttpModule, HttpService } from '@nestjs/axios';
+// import { AsyncConfiguration, Configuration, ConfigurationFactory } from './configuration';
 
-import { AuthService } from './api/auth.service';
-import { FarmerService } from './api/farmer.service';
-import { ProductService } from './api/product.service';
-import { UserService } from './api/user.service';
+// import { AuthService } from './api/auth.service';
+// import { FarmerService } from './api/farmer.service';
+// import { ProductService } from './api/product.service';
+// import { UserService } from './api/user.service';
 
-@Global()
-@Module({
-  imports:      [ HttpModule ],
-  exports:      [
-    AuthService,
-    FarmerService,
-    ProductService,
-    UserService
-  ],
-  providers: [
-    AuthService,
-    FarmerService,
-    ProductService,
-    UserService
-  ]
-})
-export class ApiModule {
-    public static forRoot(configurationFactory: () => Configuration): DynamicModule {
-        return {
-            module: ApiModule,
-            providers: [ { provide: Configuration, useFactory: configurationFactory } ]
-        };
-    }
+// @Global()
+// @Module({
+//   imports:      [ HttpModule ],
+//   exports:      [
+//     AuthService,
+//     FarmerService,
+//     ProductService,
+//     UserService
+//   ],
+//   providers: [
+//     AuthService,
+//     FarmerService,
+//     ProductService,
+//     UserService
+//   ]
+// })
+// export class ApiModule {
+//     public static forRoot(configurationFactory: () => Configuration): DynamicModule {
+//         return {
+//             module: ApiModule,
+//             providers: [ { provide: Configuration, useFactory: configurationFactory } ]
+//         };
+//     }
 
-    /**
-     * Register the module asynchronously.
-     */
-    static forRootAsync(options: AsyncConfiguration): DynamicModule {
-        const providers = [...this.createAsyncProviders(options)];
-        return {
-            module: ApiModule,
-            imports: options.imports || [],
-            providers,
-            exports: providers,
-        };
-    }
+//     /**
+//      * Register the module asynchronously.
+//      */
+//     static forRootAsync(options: AsyncConfiguration): DynamicModule {
+//         const providers = [...this.createAsyncProviders(options)];
+//         return {
+//             module: ApiModule,
+//             imports: options.imports || [],
+//             providers,
+//             exports: providers,
+//         };
+//     }
 
-    private static createAsyncProviders(options: AsyncConfiguration): Provider[] {
-        if (options.useClass) {
-            return [
-                this.createAsyncConfigurationProvider(options),
-                {
-                    provide: options.useClass,
-                    useClass: options.useClass,
-                },
-            ];
-        }
-        return [this.createAsyncConfigurationProvider(options)];
-    }
+//     private static createAsyncProviders(options: AsyncConfiguration): Provider[] {
+//         if (options.useClass) {
+//             return [
+//                 this.createAsyncConfigurationProvider(options),
+//                 {
+//                     provide: options.useClass,
+//                     useClass: options.useClass,
+//                 },
+//             ];
+//         }
+//         return [this.createAsyncConfigurationProvider(options)];
+//     }
 
-    private static createAsyncConfigurationProvider(
-        options: AsyncConfiguration,
-    ): Provider {
-        if (options.useFactory) {
-            return {
-                provide: Configuration,
-                useFactory: options.useFactory,
-                inject: options.inject || [],
-            };
-        }
-        return {
-            provide: Configuration,
-            useFactory: async (optionsFactory: ConfigurationFactory) =>
-                await optionsFactory.createConfiguration(),
-            inject: (options.useExisting && [options.useExisting]) || (options.useClass && [options.useClass]) || [],
-        };
-    }
+//     private static createAsyncConfigurationProvider(
+//         options: AsyncConfiguration,
+//     ): Provider {
+//         if (options.useFactory) {
+//             return {
+//                 provide: Configuration,
+//                 useFactory: options.useFactory,
+//                 inject: options.inject || [],
+//             };
+//         }
+//         return {
+//             provide: Configuration,
+//             useFactory: async (optionsFactory: ConfigurationFactory) =>
+//                 await optionsFactory.createConfiguration(),
+//             inject: (options.useExisting && [options.useExisting]) || (options.useClass && [options.useClass]) || [],
+//         };
+//     }
 
-    constructor( httpService: HttpService) { }
-}
+//     constructor( httpService: HttpService) { }
+// }
