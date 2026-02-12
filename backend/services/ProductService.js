@@ -10,6 +10,7 @@ const Product = require('../models/Product');
 const createProduct = ({ product }) => new Promise(
   async (resolve, reject) => {
     try {
+      dkdkdkdk = 
       resolve(Service.successResponse({
         product,
       }));

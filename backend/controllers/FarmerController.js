@@ -11,9 +11,14 @@ const service = require('../services/FarmerService');
 const config = require('../config.js');
 const db = require('../db.js');
 
+@Controller('farmer')
+
+@Get('legal_entity/:legalEntityId')
 const createFarmer = async (request, response) => {
   await Controller.handleRequest(request, response, service.createFarmer);
 };
+
+
 
 const farmerIdDELETE = async (request, response) => {
   await Controller.handleRequest(request, response, service.farmerIdDELETE);

@@ -1,0 +1,5 @@
+APUNTES
+
+mongodb+srv://usuario_publico:1234@prueba.zv1f9as.mongodb.net/harbest"
+
+Para acceder al Swagger: localhost:3000/api-docs
