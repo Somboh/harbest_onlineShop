@@ -1,20 +1,24 @@
 /* eslint-disable no-unused-vars */
-const Service = require('./Service');
-const Product = require('../models/Product');
+// const Service = require('./Service');
+// const Product = require('../models/Product');
+// const { Schema } = require('mongoose');
+import Service from './Service';
+import Product from '../models/Product';
+import {Schema} from 'mongoose';
+
 /**
 * Registrar un nuevo producto
 *
 * product Product  (optional)
 * returns Product
 * */
-const createProduct = ({ product }) => new Promise(
+const createProduct = ( product:any ) => new Promise(
   async (resolve, reject) => {
     try {
-      dkdkdkdk = 
       resolve(Service.successResponse({
         product,
       }));
-    } catch (e) {
+    } catch (e:any) {
       reject(Service.rejectResponse(
         e.message || 'Invalid input',
         e.status || 405,
