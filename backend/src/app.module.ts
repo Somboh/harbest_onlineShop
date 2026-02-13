@@ -1,15 +1,19 @@
 import { Module } from '@nestjs/common';
 
-import { UserController } from './controller/UserController';
-import { UserService } from './service/UserService';
+import { UserController } from './User/UserController';
+import { UserService } from './User/UserService';
 
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import config from 'config';
 import { MongooseModule } from '@nestjs/mongoose';
 
-import { FarmerService } from './service/FarmerService';
-import { FarmerController } from './controller/FarmerController';
-import { Farmer, FarmerSchema } from './schemas/FarmerSchema';
+import { FarmerService } from './Farmer/FarmerService';
+import { FarmerController } from './Farmer/FarmerController';
+import { Farmer, FarmerSchema } from './Farmer/FarmerSchema';
+import { JwtModule } from '@nestjs/jwt';
+import { AuthController } from './Auth/authController';
+import { AuthService } from './Auth/authService';
+import { User, UserSchema } from './User/UserSchema';
 
 @Module({
   imports: [
@@ -34,9 +38,19 @@ import { Farmer, FarmerSchema } from './schemas/FarmerSchema';
     }),
 
     //Se importa el módulo de Mongoose para el esquema de Farmer
-    MongooseModule.forFeature([{ name: Farmer.name, schema: FarmerSchema }]),
+    MongooseModule.forFeature([{ name: Farmer.name, schema: FarmerSchema },{ name: User.name, schema: UserSchema }]),
+    
+    //importar el módulo de JWT para la autenticación
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('jwt_secret'),
+      })
+    })
   ],
-  controllers: [UserController,FarmerController],
-  providers: [UserService,FarmerService],
+  controllers: [UserController,FarmerController,AuthController],
+  providers: [UserService,FarmerService,AuthService],
+  // exports: [AuthService]
 })
 export class AppModule {}
