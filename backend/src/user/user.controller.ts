@@ -7,6 +7,8 @@ export class UserController {
   constructor(private readonly usersService: UserService) {}
 
   @Post()
+  //este post como el de farmer no haria falta porque se usa el de auth,
+  //cuando el de auth funcione se puede borrar
   create(@Body() body: Partial<User>) {
     return this.usersService.createUser(body);
   }

@@ -96,10 +96,12 @@
 
 import { Module } from '@nestjs/common';
 import { UsersModule } from './user/user.module';
+import { FarmerModule } from './Farmer/farmer.module';
 
 @Module({
   imports: [
-    UsersModule
+    UsersModule,
+    FarmerModule,
   ],
   controllers: [],
   providers: [],

@@ -17,7 +17,7 @@ export class FarmerDTO {
     
     @IsString()
     @IsNotEmpty()
-    password: string;
+    contra: string;
     
     @IsString()
     @IsNotEmpty()
