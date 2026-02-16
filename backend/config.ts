@@ -13,5 +13,5 @@ export default () => ({
        apiSecret: process.env.CLOUDINARY_API_SECRET
     },
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-    jwt_secret: process.env.JWT_SECRET
+    jwt_secret: process.env.JWT_SECRET,
 })

@@ -1,7 +1,6 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param} from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './user.dto';
-import { AuthGuard } from 'src/Auth/auth.guard';
 
 @Controller('/users')
 export class UserController {
@@ -14,7 +13,6 @@ export class UserController {
     return this.usersService.createUser(body);
   }
 
-  @UseGuards(AuthGuard) //Aquí se puede usar el AuthGuard para proteger esta ruta y que solo usuarios autenticados puedan acceder
   @Get(":userId")
   getUser(@Param('userId') userId: string) {
     return this.usersService.getUser(userId);

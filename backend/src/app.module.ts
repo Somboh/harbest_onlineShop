@@ -38,15 +38,32 @@
 // })
 // export class AppModule {}
 
-
+import { ConfigModule,ConfigService } from '@nestjs/config';
+import config from 'config';
 
 import { Module } from '@nestjs/common';
 import { UsersModule } from './user/user.module';
 import { FarmerModule } from './Farmer/farmer.module';
 import { AuthModule } from './Auth/auth.module';
-
+import { JwtModule } from '@nestjs/jwt';
 @Module({
   imports: [
+    //Para cargar las variables de .env en config.ts
+    ConfigModule.forRoot({
+          //importa las variables de entorno desde el archivo config.ts
+          isGlobal: true,
+          load: [config]
+    }),
+    //Para poder usar los tokens jwt
+    JwtModule.registerAsync({
+      global: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService:ConfigService)=>({
+        secret: configService.get<string>('jwt_secret'),
+        signOptions:{expiresIn: '24h'},
+      }),
+    }),
     //Modulos de cada clase
     UsersModule,
     FarmerModule,

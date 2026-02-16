@@ -1,7 +1,8 @@
-import { CanActivate, ExecutionContext, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 
+@Injectable()
 export class AuthGuard implements CanActivate{
     constructor(private jwtService: JwtService, private configService:ConfigService){}
 
@@ -17,13 +18,13 @@ export class AuthGuard implements CanActivate{
 
         try {
             //Se verifica el token con el secreto que tenemos en .env
-            const payload = this.jwtService.verifyAsync(token,{
+            const payload = await this.jwtService.verifyAsync(token,{
                 secret: this.configService.get<string>('jwt_secret'),
             })
-
-            //Se guarda el payload en el request para que esté disponible en los controladores protegidos
+            
+            //por si se usa, se guarda en la request el user
+            //que es solo el email y el id
             request['user'] = payload;
-
         } catch (error) {
             throw new UnauthorizedException("Token inválido o expirado");
         }
@@ -33,7 +34,6 @@ export class AuthGuard implements CanActivate{
     private extractTokenFromHeader(request:any): string | undefined{
         //Obtener el token de autenticación del encabezado Authorization
         const [token] = request.headers.authorization?.split(' ') ?? [];
-        console.log(token);
         return token;
     }
 }

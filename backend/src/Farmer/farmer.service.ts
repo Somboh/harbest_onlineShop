@@ -26,13 +26,21 @@ export class FarmerService {
         return result;
     }
 
-    async createFarmer(farmer: FarmerDTO){
-        let id = randomString();
-        const [result] = await pool.query(
-          'INSERT INTO agricultor (id, nombre, email, contra, direccion, telefono) VALUES (?, ?, ?, ?, ?, ?)',
-          [id, farmer.nombre, farmer.email, farmer.contra, farmer.direccion, farmer.telefono],
-        );
+    async deleteFarmer(id:String){
+      const [result] = await pool.query(
+        'delete from agricultor where id = ?',
+        [id]
+      );
 
-        return result;
+      return result;
+    }
+
+    async modifyFarmer(id:String,farmer: FarmerDTO){
+      const [result] = await pool.query(
+        'update agricultor set nombre = ?, email = ?, telefono = ?, direccion = ? where id = ?',
+        [farmer.nombre, farmer.email, farmer.telefono, farmer.direccion, id]
+      );
+
+      return result;
     }
 }
