@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable} from "@nestjs/common";
 import { FarmerDTO } from "src/Farmer/farmer.dto";
 
 import { randomString } from 'src/Global';

@@ -1,7 +1,7 @@
 export default () => ({
     port: process.env.PORT || 3000,
-    database: {
-        uri:  process.env.MONGO_URI
+    database:{
+
     },
     cloudinary: {
        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
