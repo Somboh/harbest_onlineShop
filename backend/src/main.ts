@@ -14,11 +14,11 @@ bootstrap();
 //Pool para la conexion remota
 
 /*export const pool = mysql.createPool({
-  host: 'uya-harbest-db-uya-harbest.k.aivencloud.com',
-  port:20535,
-  user: 'avnadmin',
-  password: 'AVNS_sX1JUa_zAssGAEpA0A4',
-  database: 'harbest',
+  host: process.env.DB_HOSTNAME,
+  port:process.env.DB_PORT,
+  user: process.env.DB_USERNAME,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
 })*/
 
 //Pool para la conexion local
