@@ -1,6 +1,0 @@
-
-En una terminal, en el backend haz:
-npm uninstall mongodb
-npm install mysql2
-
-Borra este txt cuando acabes :)

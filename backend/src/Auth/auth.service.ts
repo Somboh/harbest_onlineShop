@@ -38,7 +38,7 @@ export class AuthService {
         }
 
         //crear el payload del token
-        const payload = { email: userResult.email, id: userResult.id };
+        const payload = { email: userResult.email, role:'user', id: userResult.id };
         //se firma el token y se devuelve
         return { accessToken: this.jwtService.sign(payload) };
     }
@@ -88,7 +88,7 @@ export class AuthService {
         }
 
         //crear el payload del token
-        const payload = { email: farmerResult.email, id: farmerResult.id };
+        const payload = { email: farmerResult.email,role:'farmer', id: farmerResult.id };
 
         //se firma el token y se devuelve
         return { accessToken: this.jwtService.sign(payload) };

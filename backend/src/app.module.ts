@@ -46,6 +46,7 @@ import { UsersModule } from './user/user.module';
 import { FarmerModule } from './Farmer/farmer.module';
 import { AuthModule } from './Auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
+import { ProductModule } from './product/product.module';
 @Module({
   imports: [
     //Para cargar las variables de .env en config.ts
@@ -68,6 +69,7 @@ import { JwtModule } from '@nestjs/jwt';
     UsersModule,
     FarmerModule,
     AuthModule,
+    ProductModule,
   ],
   controllers: [],
   providers: [],
