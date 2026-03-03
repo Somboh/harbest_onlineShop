@@ -1,7 +1,10 @@
-import { Controller, Delete, Get, Post, Put, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ProductService } from "./product.service";
 import { Product } from "./product.dto";
 import { AuthGuard } from "src/Auth/auth.guard";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { diskStorage } from "multer";
+import { extname } from "path";
 
 @Controller("product")
 export class ProductController {
@@ -24,19 +27,38 @@ export class ProductController {
     
     @UseGuards(AuthGuard)
     @Post("/")
-    async createProduct(product: Product){
-        return await this.productService.createProduct(product);
+    /*
+        lo que hago con el interceptor es:
+         - esperar a un archivo que se llame "foto" en el body de la petición
+         - guardarlo en la carpeta "uploads" del servidor local
+         - renombrarlo con un nombre único (timestamp + número aleatorio) para evitar colisiones
+         - una vez guardado el archivo se pasa al service para subirlo a cloudinary y obtener la URL, que es lo que se guardará en la base de datos
+    */
+    @UseInterceptors(FileInterceptor('foto',{
+        storage: diskStorage({
+            destination: './uploads',
+            filename: (req,file,cb)=>{
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                cb(null,uniqueSuffix+extname(file.originalname));
+            }
+        })
+    }))
+    async createProduct(@Body() product: Product, @UploadedFile() foto: Express.Multer.File){
+        console.log("Producto recibido:", product);
+        console.log("Archivo recibido:", foto.path);
+
+        return await this.productService.createProduct(product,foto);
     }
 
     @UseGuards(AuthGuard)
     @Put("/:id")
-    async updateProduct(id: string, product: Product){
+    async updateProduct(@Param("id") id: string, @Body() product: Product){
         return await this.productService.updateProduct(id, product);
     }
 
     @UseGuards(AuthGuard)
     @Delete("/:id")
-    async deleteProduct(id: string){
+    async deleteProduct(@Param("id") id: string){
         return await this.productService.deleteProduct(id);
     }
 }

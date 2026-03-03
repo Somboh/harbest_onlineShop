@@ -47,6 +47,8 @@ import { FarmerModule } from './Farmer/farmer.module';
 import { AuthModule } from './Auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ProductModule } from './product/product.module';
+import { MulterModule } from '@nestjs/platform-express';
+import { CloudinaryService } from './Cloudinary/cloudinary.service';
 @Module({
   imports: [
     //Para cargar las variables de .env en config.ts
@@ -65,6 +67,7 @@ import { ProductModule } from './product/product.module';
         signOptions:{expiresIn: '24h'},
       }),
     }),
+    MulterModule.register(),
     //Modulos de cada clase
     UsersModule,
     FarmerModule,
@@ -72,6 +75,6 @@ import { ProductModule } from './product/product.module';
     ProductModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [CloudinaryService],
 })
 export class AppModule {}

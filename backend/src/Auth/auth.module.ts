@@ -3,9 +3,10 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 
 import {AuthGuard} from './auth.guard';
+import { CloudinaryModule } from 'src/Cloudinary/cloudinary.module';
 
 @Module({
-  imports: [], 
+  imports: [CloudinaryModule], 
   controllers: [AuthController],
   providers: [AuthService,AuthGuard],
   exports: [AuthService, AuthGuard]
