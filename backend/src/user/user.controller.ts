@@ -1,6 +1,9 @@
-import { Controller, Get, Post, Body, Param} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, UseInterceptors} from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './user.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('/users')
 export class UserController {
@@ -18,4 +21,18 @@ export class UserController {
     return this.usersService.getUser(userId);
   }
 
+
+  @Put(":userId")
+  @UseInterceptors(FileInterceptor('foto',{
+          storage: diskStorage({
+              destination: './uploads',
+              filename: (req,file,cb)=>{
+                  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                  cb(null,uniqueSuffix+extname(file.originalname));
+              }
+          })
+      }))
+  updateUser(@Param('userId') userId: string, @Body() body: User,foto?:Express.Multer.File) {
+    return this.usersService.updateUser(userId, body, foto);
+  }
 }

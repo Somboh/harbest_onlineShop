@@ -52,8 +52,17 @@ export class ProductController {
 
     @UseGuards(AuthGuard)
     @Put("/:id")
-    async updateProduct(@Param("id") id: string, @Body() product: Product){
-        return await this.productService.updateProduct(id, product);
+    @UseInterceptors(FileInterceptor('foto',{
+        storage: diskStorage({
+            destination: './uploads',
+            filename: (req,file,cb)=>{
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                cb(null,uniqueSuffix+extname(file.originalname));
+            }
+        })
+    }))
+    async updateProduct(@Param("id") id: string, @Body() product: Product, @UploadedFile() foto?: Express.Multer.File){
+        return await this.productService.updateProduct(id, product, foto);
     }
 
     @UseGuards(AuthGuard)

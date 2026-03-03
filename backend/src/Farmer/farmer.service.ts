@@ -35,7 +35,7 @@ export class FarmerService {
       return result;
     }
 
-    async modifyFarmer(id:String,farmer: FarmerDTO){
+    async modifyFarmer(id:String,farmer: FarmerDTO,foto?: Express.Multer.File){
       const [result] = await pool.query(
         'update agricultor set nombre = ?, email = ?, telefono = ?, direccion = ? where id = ?',
         [farmer.nombre, farmer.email, farmer.telefono, farmer.direccion, id]

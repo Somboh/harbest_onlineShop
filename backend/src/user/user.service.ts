@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomString } from 'src/Global';
 import { pool } from 'src/main';
+import { User } from './user.dto';
 
 @Injectable()
 export class UserService {
@@ -22,5 +23,9 @@ export class UserService {
     );
 
     return result;
+  }
+
+  async updateUser(userId:string, user:User, foto?:Express.Multer.File) {
+
   }
 }

@@ -62,31 +62,25 @@ export class ProductService {
         }
     }
 
-    async updateProduct(id: string, product: Product){
-        //se comprueba si la imagen ya existe
-        //const [resFoto] = await pool.query("select * from fotos where id = ?",[product.foto])
+    async updateProduct(id: string, product: Product,foto?: Express.Multer.File){
+        //se comprueba si la imagen del producto ha cambiado
 
-        //si existe no se hace nada con la imagen
+        //si es igual no se hace nada con la imagen pero si que se modifica el producto con los nuevos datos
 
-        /*en el caso de que no exista:
-            - cojo la imagen antigua de la base de datos para borrarla de cloudinary
-            - subo la nueva imagen a cloudinary y obtengo la URL
-            - almaceno la nueva URL en la base de datos 
-                (actualizo la tabla fotos con la nueva URL, si se borra la foto se borra el producto)
-            - actualizo el producto con la nueva URL de la imagen
+        /*en el caso de que sea distinta:
+            - cojo la imagen antigua de la base de datos para borrarla de cloudinary (con el id de la BD)
+            - modifico la fila en la BD por lo que cambia la url y el id
+            - actualizo el producto y además añado la clave ajena de la foto con el nuevo id de la foto
         */
     }
 
     async deleteProduct(id: string){
-        // //se obtiene la imagen de la BD para luego poder borrarla de cloudinary
-        // const url = await pool.query("select foto from producto where id = ?", [id]);
-
-        // //se borra la imagen de cloudinary
-
-        // //se borra la foto de la tabla fotos
-        // await pool.query("delete from fotos where id = ?", [url[0][0].foto]);
-        
-        
-        // return res;
+        /*
+            - hay que obtener el producto de la BD
+            - sacamos la url y el id de la foto para borrarla de cloudinary
+            - borramos la foto de cloudinary
+            - borramos el producto de la BD
+            - borramos la foto de la BD
+        */
     }
 }
