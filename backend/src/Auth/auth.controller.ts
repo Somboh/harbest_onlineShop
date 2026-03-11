@@ -21,7 +21,7 @@ export class AuthController {
     @Post("/user/register")
     @UseInterceptors(FileInterceptor('foto',{
         storage: diskStorage({
-            destination: './uploads',
+            destination: '../../uploads',
             filename:(req,file,cb)=>{
                 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
                 cb(null,uniqueSuffix+extname(file.originalname));
@@ -40,7 +40,7 @@ export class AuthController {
     @Post("/farmer/register")
     @UseInterceptors(FileInterceptor('foto',{
         storage: diskStorage({
-            destination: './uploads',
+            destination: '../../uploads',
             filename:(req,file,cb)=>{
                 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
                 cb(null,uniqueSuffix+extname(file.originalname));

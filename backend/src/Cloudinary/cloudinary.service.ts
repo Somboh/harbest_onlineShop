@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { rejects } from "assert";
 import { v2,UploadApiErrorResponse,UploadApiResponse } from "cloudinary";
+import { resolve } from "path";
 
 @Injectable()
 export class CloudinaryService {
@@ -21,11 +23,25 @@ export class CloudinaryService {
         })
     }
 
-    // async deleteImage(): Promise<>{
+    //eliminar imagen de cloudinary por su id
+    async deleteImage(imgId: string): Promise<UploadApiErrorResponse | UploadApiResponse | undefined>{
+        return new Promise((resolve,reject)=>{
+            v2.uploader.destroy(imgId,(error,result)=>{
+                if(error)
+                    return reject(error);
+                resolve(result);
+            })
+        })
+    }
 
-    // }
-
-    // async getImageUrl(publicId: string): Promise<string>{
-
-    // }
+    //obtener URL de imagen de cloudinary por su id
+    async getImageUrl(imgId: string): Promise<string>{
+        return new Promise((resolve,rejects)=>{
+            v2.url(imgId,(error,result)=>{
+                if(error)
+                    return rejects(error);
+                resolve(result);
+            })
+        })
+    }
 }

@@ -5,6 +5,7 @@ import { CloudinaryService } from "src/Cloudinary/cloudinary.service";
 import { randomString } from 'src/Global';
 import { pool } from 'src/main';
 import * as fs from 'fs/promises';
+import { error } from "console";
 @Injectable()
 export class ProductService {
     constructor(private cloudinaryService: CloudinaryService){}
@@ -63,15 +64,57 @@ export class ProductService {
     }
 
     async updateProduct(id: string, product: Product,foto?: Express.Multer.File){
-        //se comprueba si la imagen del producto ha cambiado
+        //obtener el producto de la BD, para comprobar si existe el producto a actualizar y para obtener la foto antigua en caso de que se suba una nueva imagen
+        const [producto] = await pool.query("select * from producto where id = ?", [id]);
+        if(producto[0] === undefined){
+            throw new Error("Producto no encontrado");
+        }
 
-        //si es igual no se hace nada con la imagen pero si que se modifica el producto con los nuevos datos
+        //si se ha subido una nueva imagen, hay que actualizar la foto del producto junto al resto de datos
+        if(foto){
+            //saco de la BD la foto antigua para borrarla de cloudinary
+            const [fotoBD] = await pool.query("select * from fotos where id = ?", [producto[0].foto]);
+            if(fotoBD[0] === undefined){
+                throw new Error("Foto no encontrada");
+            }
 
-        /*en el caso de que sea distinta:
-            - cojo la imagen antigua de la base de datos para borrarla de cloudinary (con el id de la BD)
-            - modifico la fila en la BD por lo que cambia la url y el id
-            - actualizo el producto y además añado la clave ajena de la foto con el nuevo id de la foto
-        */
+            //borro la foto antigua de cloudinary
+            try {
+                await this.cloudinaryService.deleteImage(fotoBD[0].id)
+            } catch (error) {
+                throw new Error("Error al borrar la imagen antigua de cloudinary: " + error.message);
+            }
+
+            //subo la nueva imagen a cloudinary y obtengo la URL para guardarla en la base de datos
+            let resFoto;
+            try {
+                resFoto = await this.cloudinaryService.uploadImage(foto.path);
+            } catch (error) {
+                throw new Error("Error al subir la nueva imagen a cloudinary: " + error.message);
+            }
+
+            //una vez subida a la nube la subo a la BD y actualizo el producto con la nueva foto
+            try {
+                await pool.query("update fotos set path = ?, id = ? where id = ?", [resFoto.secure_url,resFoto.public_id,producto[0].foto]);
+                await pool.query("update producto set nombre = ?, foto = ?, descripcion = ?, precio = ?, cantidad = ?, email_agricultor = ? where id = ?",
+                    [product.nombre,resFoto.public_id,product.descripcion,product.precio,product.cantidad,product.email_agricultor,id]
+                );
+                //se borra la imagen del servidor local una vez subida a cloudinary
+                await fs.unlink(foto.path);
+            } catch (error) {
+                throw new Error("Error al actualizar el producto en la base de datos: " + error.message);
+            }
+        }
+        //en el caso de que no se haya subido una nueva imagen, solo se actualizan los datos del producto sin modificar la foto
+        else{
+            try {
+                await pool.query("update producto set nombre = ?, descripcion = ?, precio = ?, cantidad = ?, email_agricultor = ? where id = ?",
+                    [product.nombre,product.descripcion,product.precio,product.cantidad,product.email_agricultor,id]
+                );
+            } catch (error) {
+                throw new Error("Error al actualizar el producto en la base de datos: " + error.message);
+            }
+        }
     }
 
     async deleteProduct(id: string){
@@ -82,5 +125,33 @@ export class ProductService {
             - borramos el producto de la BD
             - borramos la foto de la BD
         */
+       //comprobar que el producto existe y se saca el id de la foto para borrarla de cloudinary
+       const [producto] = await pool.query("select * from producto where id = ?", [id]);
+       if(producto[0] === undefined){
+           throw new Error("Producto no encontrado");
+       }
+
+       if(producto[0].foto){
+            //saco de la BD la foto para borrarla de cloudinary
+            const [fotoBD] = await pool.query("select * from fotos where id = ?", [producto[0].foto]);
+            if(fotoBD[0] === undefined){
+                throw new Error("Foto no encontrada");
+            }
+
+            //se borra la foto de cloudinary
+            try {
+                await this.cloudinaryService.deleteImage(fotoBD[0].id)
+            } catch (error) {
+                throw new Error("Error al borrar la imagen de cloudinary: " + error.message);
+            }
+
+            //se borra el producto de la BD y luego la foto de la BD
+            try {
+                await pool.query("delete from producto where id = ?", [id]);
+                await pool.query("delete from fotos where id = ?", [producto[0].foto]);
+            } catch (error) {
+                throw new Error("Error al borrar el producto o la foto de la base de datos: " + error.message);
+            }
+       }
     }
 }
