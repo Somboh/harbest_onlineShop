@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomString } from 'src/Global';
 import { DatabaseService } from 'src/database/database.service';
+import { User } from './user.dto';
 
 @Injectable()
 export class UserService {
@@ -41,10 +42,10 @@ export class UserService {
   }
 
   // UPDATE
-  async updateUser(userId: string, data) {
+  async updateUser(userId: string, user: User) {
     const { error } = await this.db.getClient()
       .from('usuario')
-      .update({ nombre: data.nombre, email: data.email, contra: data.contra })
+      .update({ nombre: user.nombre, email: user.email, contra: user.contra })
       .eq('id', userId);
 
     if (error) throw error;

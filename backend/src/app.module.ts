@@ -7,7 +7,7 @@ import { UsersModule } from './user/user.module';
 import { FarmerModule } from './Farmer/farmer.module';
 import { AuthModule } from './Auth/auth.module';
 import { ProductModule } from './product/product.module';
-
+import { CloudinaryService } from './Cloudinary/cloudinary.service';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -27,6 +27,6 @@ import { ProductModule } from './product/product.module';
     ProductModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [CloudinaryService],
 })
 export class AppModule {}
