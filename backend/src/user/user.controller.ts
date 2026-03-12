@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param} from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './user.dto';
 
@@ -6,16 +14,36 @@ import { User } from './user.dto';
 export class UserController {
   constructor(private readonly usersService: UserService) {}
 
+  // CREATE
   @Post()
-  //este post como el de farmer no haria falta porque se usa el de auth,
-  //cuando el de auth funcione se puede borrar
   create(@Body() body: Partial<User>) {
     return this.usersService.createUser(body);
   }
 
-  @Get(":userId")
+  // READ ALL
+  @Get()
+  getUsers() {
+    return this.usersService.getUsers();
+  }
+
+  // READ ONE
+  @Get(':userId')
   getUser(@Param('userId') userId: string) {
     return this.usersService.getUser(userId);
   }
 
+  // UPDATE
+  @Put(':userId')
+  updateUser(
+    @Param('userId') userId: string,
+    @Body() body: Partial<User>,
+  ) {
+    return this.usersService.updateUser(userId, body);
+  }
+
+  // DELETE
+  @Delete(':userId')
+  deleteUser(@Param('userId') userId: string) {
+    return this.usersService.deleteUser(userId);
+  }
 }

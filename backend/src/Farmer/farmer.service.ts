@@ -1,46 +1,49 @@
-import { Injectable} from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { FarmerDTO } from "src/Farmer/farmer.dto";
-
 import { randomString } from 'src/Global';
-import { pool } from 'src/main';
+import { DatabaseService } from 'src/database/database.service';
 
 @Injectable()
 export class FarmerService {
-    //Se inyecta el modelo de Farmer para poder hacer operaciones en la base de datos
-    constructor(){}
+    constructor(private db: DatabaseService) {}
 
-    async getAllFarmers(){
-        const [result] = await pool.query(
-          'SELECT * from agricultor',
-        );
+    async getAllFarmers() {
+        const { data, error } = await this.db.getClient()
+            .from('agricultor')
+            .select('*');
 
-        return result;
+        if (error) throw error;
+        return data;
     }
 
-    async getFarmerById(id: string){
-        const [result] = await pool.query(
-          'SELECT * from agricultor WHERE id = ?',
-          [id],
-        );
+    async getFarmerById(id: string) {
+        const { data, error } = await this.db.getClient()
+            .from('agricultor')
+            .select('*')
+            .eq('id', id)
+            .single();
 
-        return result;
+        if (error) return null;
+        return data;
     }
 
-    async deleteFarmer(id:String){
-      const [result] = await pool.query(
-        'delete from agricultor where id = ?',
-        [id]
-      );
+    async deleteFarmer(id: string) {
+        const { error } = await this.db.getClient()
+            .from('agricultor')
+            .delete()
+            .eq('id', id);
 
-      return result;
+        if (error) throw error;
+        return { message: 'Agricultor eliminado' };
     }
 
-    async modifyFarmer(id:String,farmer: FarmerDTO){
-      const [result] = await pool.query(
-        'update agricultor set nombre = ?, email = ?, telefono = ?, direccion = ? where id = ?',
-        [farmer.nombre, farmer.email, farmer.telefono, farmer.direccion, id]
-      );
+    async modifyFarmer(id: string, farmer: FarmerDTO) {
+        const { error } = await this.db.getClient()
+            .from('agricultor')
+            .update({ nombre: farmer.nombre, email: farmer.email, telefono: farmer.telefono, direccion: farmer.direccion })
+            .eq('id', id);
 
-      return result;
+        if (error) throw error;
+        return { message: 'Agricultor actualizado' };
     }
 }

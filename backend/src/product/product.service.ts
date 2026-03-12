@@ -1,19 +1,21 @@
 import { Injectable } from "@nestjs/common";
 import { Product } from "./product.dto";
-
 import { randomString } from 'src/Global';
-import { pool } from 'src/main';
+import { DatabaseService } from 'src/database/database.service';
+
 @Injectable()
 export class ProductService {
-    async getAllProducts(){}
+    constructor(private db: DatabaseService) {}
 
-    async getProductById(id: string){}
+    async getAllProducts() {}
 
-    async getProductsByFarmer(farmerId: string){}
+    async getProductById(id: string) {}
 
-    async createProduct(product: Product){}
+    async getProductsByFarmer(farmerId: string) {}
 
-    async updateProduct(id: string, product: Product){}
+    async createProduct(product: Product) {}
 
-    async deleteProduct(id: string){}
+    async updateProduct(id: string, product: Product) {}
+
+    async deleteProduct(id: string) {}
 }
