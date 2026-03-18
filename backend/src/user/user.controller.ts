@@ -10,11 +10,6 @@ import { AuthGuard } from 'src/Auth/auth.guard';
 export class UserController {
   constructor(private readonly usersService: UserService) {}
 
-  // @Post()
-  // create(@Body() body: Partial<User>) {
-  //   return this.usersService.createUser(body);
-  // }
-
   @Get("/id/:userId")
   async getUser(@Param('userId') userId: string) {
     return this.usersService.getUser(userId);
@@ -28,8 +23,8 @@ export class UserController {
     return this.usersService.getUserByEmail(email);
   }
 
-
-  @Put(":userId")
+  // UPDATE
+  @Put(':userId')
   @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('foto',{
           storage: diskStorage({
@@ -44,7 +39,8 @@ export class UserController {
     return this.usersService.updateUser(userId, body, foto);
   }
 
-  @Delete(":userId")
+  // DELETE
+  @Delete(':userId')
   @UseGuards(AuthGuard)
   async deleteUser(@Param("userId") userId: string){
     return this.usersService.deleteUser(userId);

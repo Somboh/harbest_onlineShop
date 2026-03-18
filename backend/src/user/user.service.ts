@@ -15,9 +15,6 @@ export class UserService {
   //     [id, data.nombre, data.email, data.contra],
   //   );
 
-  //   return result;
-  // }
-
   async getUser(userId:string) {
     const {data} = await this.db.getClient().from("usuario").select("*").eq("id", userId).single();
     return data;

@@ -1,5 +1,5 @@
 import { FarmerDTO } from "src/Farmer/farmer.dto";
-import { User} from "src/user/user.dto";
+import { User } from "src/user/user.dto";
 import { randomString } from 'src/Global';
 import { DatabaseService } from "src/database/database.service";
 
@@ -18,12 +18,9 @@ export class AuthService {
         private cloudinaryService: CloudinaryService
     ) {}
 
-    async loginUser(user:any){
-        //Comprobar que existe el usuario con el email y password proporcionados
-        //Si existe, generar un token de autenticación y devolverlo al cliente
-        //Si no existe, devolver un error de autenticación
-        if(!user.email || !user.contra){
-            return {status:'ERROR', message: 'Por favor, ingrese email y contraseña'};
+    async loginUser(user: any) {
+        if (!user.email || !user.contra) {
+            return { status: 'ERROR', message: 'Por favor, ingrese email y contraseña' };
         }
 
          const { data, error } = await this.db.getClient()
@@ -39,7 +36,7 @@ export class AuthService {
 
         const isPasswordValid = await bcrypt.compare(user.contra, data.contra);
         if (!isPasswordValid) {
-            return {status:'ERROR', message: 'Credenciales inválidas, por favor intente de nuevo'};
+            return { status: 'ERROR', message: 'Credenciales inválidas, por favor intente de nuevo' };
         }
 
         //crear el payload del token
@@ -47,6 +44,18 @@ export class AuthService {
         //se firma el token y se devuelve
         return { accessToken: this.jwtService.sign(payload) };
     }
+
+    // async registerUser(user: User) {
+    //     const salt = await bcrypt.genSalt(10);
+    //     user.contra = await bcrypt.hash(user.contra, salt);
+
+    //     const id = randomString();
+    //     const { error } = await this.db.getClient()
+    //         .from('usuario')
+    //         .insert({ id, nombre: user.nombre, email: user.email, contra: user.contra });
+
+    //     if (error) throw error;
+    //     return { status: 'OK', message: 'Usuario registrado exitosamente' };
 
     async registerUser(user:User,foto: Express.Multer.File){
         try{
@@ -95,13 +104,9 @@ export class AuthService {
 
     }
 
-    async loginFarmer(farmer:any){
-        //Comprobar que existe el agricultor con el email y password proporcionados
-        //Si existe, generar un token de autenticación y devolverlo al cliente
-        //Si no existe, devolver un error de autenticación
-
-        if(!farmer.email || !farmer.contra){
-            return {status:'ERROR', message: 'Por favor, ingrese email y contraseña'};
+    async loginFarmer(farmer: any) {
+        if (!farmer.email || !farmer.contra) {
+            return { status: 'ERROR', message: 'Por favor, ingrese email y contraseña' };
         }
 
         const { data, error} = await this.db.getClient().from('agricultor').select('*').eq('email', farmer.email).single();
@@ -113,7 +118,7 @@ export class AuthService {
 
         const isPasswordValid = await bcrypt.compare(farmer.contra, data.contra);
         if (!isPasswordValid) {
-            return {status:'ERROR', message: 'Credenciales inválidas, por favor intente de nuevo'};
+            return { status: 'ERROR', message: 'Credenciales inválidas, por favor intente de nuevo' };
         }
 
         //crear el payload del token
