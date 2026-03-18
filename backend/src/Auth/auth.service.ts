@@ -1,17 +1,20 @@
 import { FarmerDTO } from "src/Farmer/farmer.dto";
 import { User} from "src/user/user.dto";
 import { randomString } from 'src/Global';
-import { pool } from 'src/main';
+import { DatabaseService } from "src/database/database.service";
 
 import bcrypt from 'bcryptjs';
 import { JwtService } from "@nestjs/jwt";
 import { Injectable } from "@nestjs/common";
 import { CloudinaryService } from "src/Cloudinary/cloudinary.service";
+import * as fs from 'fs/promises';
+import e from "express";
 
 @Injectable()
 export class AuthService {
     constructor(
         private jwtService: JwtService,
+        private db: DatabaseService,
         private cloudinaryService: CloudinaryService
     ) {}
 
@@ -23,24 +26,24 @@ export class AuthService {
             return {status:'ERROR', message: 'Por favor, ingrese email y contraseña'};
         }
 
-        const [result]: any[] = await pool.query(
-            "select * from usuario where email = ?",
-            [user.email]
-        )
+         const { data, error } = await this.db.getClient()
+            .from('usuario')
+            .select('*')
+            .eq('email', user.email)
+            .single();
 
         //como lo que devuelve es un array me guardo el primer elemento
-        if (result.length === 0) {
+        if (error || !data) {
             return {status:'ERROR', message: 'Credenciales inválidas, por favor intente de nuevo'};
         }
 
-        const userResult = result[0];
-        const isPasswordValid = await bcrypt.compare(user.contra, userResult.contra);
+        const isPasswordValid = await bcrypt.compare(user.contra, data.contra);
         if (!isPasswordValid) {
             return {status:'ERROR', message: 'Credenciales inválidas, por favor intente de nuevo'};
         }
 
         //crear el payload del token
-        const payload = { email: userResult.email, role:'user', id: userResult.id };
+        const payload = { email: data.email, role:'user', id: data.id };
         //se firma el token y se devuelve
         return { accessToken: this.jwtService.sign(payload) };
     }
@@ -56,26 +59,39 @@ export class AuthService {
             if(!resFoto || resFoto.error){
                 throw new Error("Error al subir la imagen");
             }
-
+            
             //subo la url a la base da datos en fotos
-            const [resFotoBD] = await pool.query("insert into fotos (path,id) values (?,?)", [resFoto.secure_url,resFoto.public_id]);
-
-            //subo el usuario a la base de datos, con la url de la foto como clave ajena
+            const {error} = await this.db.getClient()
+            .from('fotos')
+            .insert({path: resFoto.secure_url, id: resFoto.public_id})
+            
+            if(error){
+                return {status:'ERROR', message:'Error al registrar usuario: '+error.message};
+            }
+            
             const salt = await bcrypt.genSalt(10);
-    
+            
             //encriptar la contraseña antes de guardarla en la base de datos
             user.contra = await bcrypt.hash(user.contra, salt);
-    
+            
+            
             let id = randomString();
-            const [result] = await pool.query(
-                "insert into usuario (id,nombre, email, contra,foto) values (?, ?, ?, ?, ?)",
-                [id, user.nombre, user.email, user.contra,resFoto.public_id]
-            )
-            return await {status:'OK', message:'Usuario registrado exitosamente'};
+            //subo el usuario a la base de datos, con la url de la foto como clave ajena
+            await this.db.getClient().from('usuario').insert({
+                id: id,
+                nombre: user.nombre,
+                email: user.email,
+                contra: user.contra,
+                foto: resFoto.public_id
+            })
+
+            await fs.unlink(foto.path); //elimino la foto del servidor local una vez subida a cloudinary
         }
         catch(error){
-            return await {status:'ERROR', message:'Error al registrar usuario'};
+            await fs.unlink(foto.path); //elimino la foto del servidor local una vez subida a cloudinary
+            return {status:'ERROR', message:'Error al registrar usuario: ' + error.message};
         }
+        return {status:'OK', message:'Usuario registrado exitosamente'};
 
     }
 
@@ -88,25 +104,20 @@ export class AuthService {
             return {status:'ERROR', message: 'Por favor, ingrese email y contraseña'};
         }
 
-        const [result]: any[] = await pool.query(
-            "select * from agricultor where email = ?",
-            [farmer.email]
-        )
+        const { data, error} = await this.db.getClient().from('agricultor').select('*').eq('email', farmer.email).single();
 
         //como lo que devuelve es un array me guardo el primer elemento
-        if (result.length === 0) {
+        if (error || !data) {
             return {status:'ERROR', message: 'Credenciales inválidas, por favor intente de nuevo'};
         }
 
-        const farmerResult = result[0];
-
-        const isPasswordValid = await bcrypt.compare(farmer.contra, farmerResult.contra);
+        const isPasswordValid = await bcrypt.compare(farmer.contra, data.contra);
         if (!isPasswordValid) {
             return {status:'ERROR', message: 'Credenciales inválidas, por favor intente de nuevo'};
         }
 
         //crear el payload del token
-        const payload = { email: farmerResult.email,role:'farmer', id: farmerResult.id };
+        const payload = { email: data.email,role:'farmer', id: data.id };
 
         //se firma el token y se devuelve
         return { accessToken: this.jwtService.sign(payload) };
@@ -126,7 +137,11 @@ export class AuthService {
             }
 
             //subo la url a la base da datos en fotos
-            const [resFotoBD] = await pool.query("insert into fotos (path,id) values (?,?)", [resFoto.secure_url,resFoto.public_id]);
+            const { error } = await this.db.getClient().from('fotos').insert({path: resFoto.secure_url, id: resFoto.public_id});
+            
+            if(error){
+                return {status:'ERROR', message:'Error al registrar agricultor: ' + error.message};
+             }
 
             let id = randomString();
             const salt = await bcrypt.genSalt(10);
@@ -134,13 +149,25 @@ export class AuthService {
             //encriptar la contraseña antes de guardarla en la base de datos
             farmer.contra = await bcrypt.hash(farmer.contra, salt);
             
-            const [result] = await pool.query(
-                'insert into agricultor (id,nombre,email, contra, direccion, telefono, foto) values (?, ?, ?, ?, ?, ?, ?)',
-                [id,farmer.nombre, farmer.email, farmer.contra, farmer.direccion, farmer.telefono,resFoto.public_id]
-            )
-            return await {status:'OK', message:'Agricultor registrado exitosamente'};
+           const {error:errorAgricultor} = await this.db.getClient().from('agricultor').insert({
+                id: id,
+                nombre: farmer.nombre,
+                email: farmer.email,
+                contra: farmer.contra,
+                direccion: farmer.direccion,
+                telefono: farmer.telefono,
+                foto: resFoto.public_id
+            })
+
+            if(errorAgricultor){
+                await fs.unlink(foto.path); //elimino la foto del servidor local una vez subida a cloudinary
+                return {status:'ERROR', message:'Error al registrar agricultor: ' + errorAgricultor.message};
+            }
+            await fs.unlink(foto.path); //elimino la foto del servidor local una vez subida a cloudinary
         } catch (error) {
-            throw new Error("Error al registrar agricultor");
+            await fs.unlink(foto.path); //elimino la foto del servidor local una vez subida a cloudinary
+            throw new Error("Error al registrar agricultor: " + error.message);
         }
+        return {status:'OK', message:'Agricultor registrado exitosamente'};
     }
 }

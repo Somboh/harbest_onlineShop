@@ -36,7 +36,7 @@ export class ProductController {
     */
     @UseInterceptors(FileInterceptor('foto',{
         storage: diskStorage({
-            destination: '../../uploads',
+            destination: './uploads',
             filename: (req,file,cb)=>{
                 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
                 cb(null,uniqueSuffix+extname(file.originalname));
@@ -44,9 +44,6 @@ export class ProductController {
         })
     }))
     async createProduct(@Body() product: Product, @UploadedFile() foto: Express.Multer.File){
-        console.log("Producto recibido:", product);
-        console.log("Archivo recibido:", foto);
-
         return await this.productService.createProduct(product,foto);
     }
 
@@ -54,7 +51,7 @@ export class ProductController {
     @Put("/:id")
     @UseInterceptors(FileInterceptor('foto',{
         storage: diskStorage({
-            destination: '../../uploads',
+            destination: './uploads',
             filename: (req,file,cb)=>{
                 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
                 cb(null,uniqueSuffix+extname(file.originalname));

@@ -16,10 +16,16 @@ export class FarmerController {
         return await this.farmerService.getAllFarmers();
     }
 
-    @Get("/:id")
+    @Get("/id/:id")
     //Obtener un agricultor por su ID
     async getFarmerById(@Param("id") id: string){
         return this.farmerService.getFarmerById(id);
+    }
+
+    @Get("/email/:email")
+    //Obtener un agricultor por su email
+    async getFarmerByEmail(@Param("email") email: string){
+        return this.farmerService.getFarmerByEmail(email);
     }
 
     @UseGuards(AuthGuard)
@@ -39,7 +45,7 @@ export class FarmerController {
                 }
             })
     }))
-    async modifyFarmer(@Param("id") id: string, @Body() farmer: FarmerDTO, @UploadedFile() foto?: Express.Multer.File){
-        return this.farmerService.modifyFarmer(id,farmer,foto);
+    async updateFarmer(@Param("id") id: string, @Body() farmer: FarmerDTO, @UploadedFile() foto?: Express.Multer.File){
+        return this.farmerService.updateFarmer(id,farmer,foto);
     }
 }
