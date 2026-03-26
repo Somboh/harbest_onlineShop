@@ -8,7 +8,6 @@ import { JwtService } from "@nestjs/jwt";
 import { Injectable } from "@nestjs/common";
 import { CloudinaryService } from "src/Cloudinary/cloudinary.service";
 import * as fs from 'fs/promises';
-import e from "express";
 
 @Injectable()
 export class AuthService {
@@ -29,7 +28,6 @@ export class AuthService {
             .eq('email', user.email)
             .single();
 
-        //como lo que devuelve es un array me guardo el primer elemento
         if (error || !data) {
             return {status:'ERROR', message: 'Credenciales inválidas, por favor intente de nuevo'};
         }
@@ -42,20 +40,8 @@ export class AuthService {
         //crear el payload del token
         const payload = { email: data.email, role:'user', id: data.id };
         //se firma el token y se devuelve
-        return { accessToken: this.jwtService.sign(payload) };
+        return { accessToken: this.jwtService.sign(payload,{expiresIn: '30d'}) };
     }
-
-    // async registerUser(user: User) {
-    //     const salt = await bcrypt.genSalt(10);
-    //     user.contra = await bcrypt.hash(user.contra, salt);
-
-    //     const id = randomString();
-    //     const { error } = await this.db.getClient()
-    //         .from('usuario')
-    //         .insert({ id, nombre: user.nombre, email: user.email, contra: user.contra });
-
-    //     if (error) throw error;
-    //     return { status: 'OK', message: 'Usuario registrado exitosamente' };
 
     async registerUser(user:User,foto: Express.Multer.File){
         try{
@@ -125,7 +111,7 @@ export class AuthService {
         const payload = { email: data.email,role:'farmer', id: data.id };
 
         //se firma el token y se devuelve
-        return { accessToken: this.jwtService.sign(payload) };
+        return { accessToken: this.jwtService.sign(payload,{expiresIn: '30d'}) };
     }
 
     async registerFarmer(farmer:FarmerDTO, foto: Express.Multer.File){
