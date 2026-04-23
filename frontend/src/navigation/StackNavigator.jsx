@@ -25,6 +25,7 @@ import InventoryScreen from "../screens/InventoryScreen";
 import OrdersAgricultorScreen from "../screens/OrdersAgricultorScreen";
 import ProfileScreenAgricultor from "../screens/ProfileScreenAgricultor";
 import SearchAgricultorScreen from "../screens/SearchAgricultorScreen";
+import ProductosAgricultorScreen from "../screens/ProductosAgricultorScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -57,6 +58,10 @@ export default function StackNavigator() {
 
         {/* AGRICULTOR */}
         <Stack.Screen name="HomeAgricultor" component={HomeAgricultorScreen} />
+        <Stack.Screen
+          name="ProductosAgricultor"
+          component={ProductosAgricultorScreen}
+        />
         <Stack.Screen
           name="ProfileAgricultor"
           component={ProfileScreenAgricultor}
