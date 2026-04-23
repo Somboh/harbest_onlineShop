@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Put, UseInterceptors, UseGuards, Delete} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, UseInterceptors, UseGuards, Delete, UploadedFile} from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -10,18 +10,21 @@ import { AuthGuard } from 'src/Auth/auth.guard';
 export class UserController {
   constructor(private readonly usersService: UserService) {}
 
-  // @Post()
-  // create(@Body() body: Partial<User>) {
-  //   return this.usersService.createUser(body);
-  // }
-
-  @Get(":userId")
-  getUser(@Param('userId') userId: string) {
+  @Get("/id/:userId")
+  async getUser(@Param('userId') userId: string) {
     return this.usersService.getUser(userId);
   }
+  @Get()
+  async getUsers() {
+    return this.usersService.getUsers();
+  }
+  @Get("/email/:email")
+  async getUserByEmail(@Param('email') email: string) {
+    return this.usersService.getUserByEmail(email);
+  }
 
-
-  @Put(":userId")
+  // UPDATE
+  @Put(':userId')
   @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('foto',{
           storage: diskStorage({
@@ -32,13 +35,14 @@ export class UserController {
               }
           })
       }))
-  updateUser(@Param('userId') userId: string, @Body() body: User,foto?:Express.Multer.File) {
+  async updateUser(@Param('userId') userId: string, @Body() body: User,@UploadedFile() foto?:Express.Multer.File) {
     return this.usersService.updateUser(userId, body, foto);
   }
 
-  @Delete(":userId")
+  // DELETE
+  @Delete(':userId')
   @UseGuards(AuthGuard)
-  deleteUser(@Param("userId") userId: string){
+  async deleteUser(@Param("userId") userId: string){
     return this.usersService.deleteUser(userId);
   }
 }

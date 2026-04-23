@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { rejects } from "assert";
 import { v2,UploadApiErrorResponse,UploadApiResponse } from "cloudinary";
-import { resolve } from "path";
 
 @Injectable()
 export class CloudinaryService {

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm i:*)",
+      "Bash(node -e \"require\\(''dotenv''\\).config\\(\\); console.log\\(''DATABASE_URL:'', process.env.DATABASE_URL ? ''loaded ✓'' : ''MISSING ✗''\\)\")",
+      "Bash(ping -n 1 db.uxtqnrxwppyrqwxbmdbs.supabase.co)"
+    ]
+  }
+}
