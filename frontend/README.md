@@ -1,73 +1,175 @@
-# React + TypeScript + Vite
+# Harbest – Marketplace Agrícola
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación móvil desarrollada con React Native y Expo orientada a la compra de productos agrícolas directamente de productores.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Descripción
 
-## React Compiler
+Harbest es una aplicación móvil centrada en la visualización y compra de productos frescos como frutas, verduras y especias, con una interfaz limpia, moderna y adaptada a dispositivos móviles.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Actualmente el proyecto incluye:
 
-## Expanding the ESLint configuration
+- Pantalla de login
+- Pantalla principal (home)
+- Navegación entre pantallas
+- Diseño adaptado a formato móvil
+- Estructura modular y escalable
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Tecnologías utilizadas
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- React Native
+- Expo
+- React Navigation
+- JavaScript (ES6)
+- StyleSheet para estilos nativos
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## Estructura del proyecto
+
+```bash
+frontend/
+│
+├── assets/
+│   └── images/
+│       └── logo-harbest.png
+│
+├── src/
+│   ├── components/
+│   │   └── common/
+│   │       └── ScreenContainer.jsx
+│   │
+│   ├── screens/
+│   │   ├── LoginScreen.jsx
+│   │   └── HomeScreen.jsx
+│   │
+│   ├── navigation/
+│   │   └── StackNavigator.jsx
+│   │
+│   ├── styles/
+│   │   ├── colors.js
+│   │   └── theme.js
+│   │
+│   └── data/
+│
+├── App.js
+└── package.json
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Instalación
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/Somboh/harbest_onlineShop.git
+cd harbest_onlineShop/frontend
 ```
+
+---
+
+### 2. Instalar dependencias
+
+```bash
+npm install
+```
+
+---
+
+### 3. Ejecutar la aplicación
+
+```bash
+npx expo start
+```
+
+---
+
+## Cómo probar la aplicación
+
+### En dispositivo móvil (recomendado)
+
+1. Instalar la aplicación Expo Go en el móvil
+2. Escanear el código QR generado en la terminal
+3. La aplicación se abrirá automáticamente
+
+---
+
+### En navegador
+
+Presionar:
+
+```bash
+w
+```
+
+Nota: la aplicación está diseñada para móvil. Se recomienda usar vista responsive en el navegador.
+
+---
+
+## Diseño de la interfaz
+
+La aplicación sigue una estética basada en:
+
+- Colores naturales y suaves
+- Fondo claro tipo beige
+- Componentes con bordes redondeados
+- Espaciado amplio y limpio
+- Interfaz centrada únicamente en experiencia móvil
+
+Colores principales:
+
+- Verde: #668B0D
+- Naranja: #d25e2c
+- Fondo: #F4EEEA
+- Blanco: #FEFEFE
+
+---
+
+## Pantallas implementadas
+
+### Login
+
+- Campo de email
+- Campo de contraseña
+- Botón de inicio de sesión
+- Diseño centrado con logo de la aplicación
+
+---
+
+### Home
+
+- Cabecera con logo
+- Buscador de productos
+- Sección de categorías
+- Listado de productos populares
+- Barra de navegación inferior
+
+---
+
+## Próximas funcionalidades
+
+- Pantalla de detalle de producto
+- Carrito de compra
+- Sistema de autenticación real
+- Conexión con API
+- Perfil de usuario
+- Sistema de favoritos
+
+---
+
+## Equipo
+
+- Cristian Burgos Payá
+- Teresa Cediel Campillo
+- María Escribano Arce
+- Pablo Romero Pérez
+
+---
+
+## Estado del proyecto
+
+En desarrollo. Versión inicial funcional con login y home.
