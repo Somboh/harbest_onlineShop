@@ -9,6 +9,7 @@ import { AuthModule } from './Auth/auth.module';
 import { ProductModule } from './product/product.module';
 import { CloudinaryService } from './Cloudinary/cloudinary.service';
 import config from 'config';
+import { ValoracionModule } from './valoracion/valoracion.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ envFilePath: '.env', isGlobal: true, load: [config] }),
@@ -26,6 +27,7 @@ import config from 'config';
     FarmerModule,
     AuthModule,
     ProductModule,
+    ValoracionModule,
   ],
   controllers: [],
   providers: [CloudinaryService],

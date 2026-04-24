@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsInt, IsNotEmpty, IsString } from "class-validator";
+import { IsInt, IsNotEmpty, IsString,IsNumber } from "class-validator";
 
 export class Product {
     @IsString()
@@ -23,4 +23,13 @@ export class Product {
     @IsString()
     @IsNotEmpty()
     email_agricultor: String;
+
+    @IsString()
+    @IsNotEmpty()
+    categoria: String;
+
+    @IsNumber()
+    @IsNotEmpty()
+    @Type(() => Number) //para transformar el valor a número, ya que viene como string en el body
+    valoracion: number;
 }
