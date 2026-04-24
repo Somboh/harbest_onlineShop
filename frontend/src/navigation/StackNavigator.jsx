@@ -23,9 +23,9 @@ import AddProductScreen from "../screens/AddProductScreen";
 import HomeAgricultorScreen from "../screens/HomeAgricultorScreen";
 import InventoryScreen from "../screens/InventoryScreen";
 import OrdersAgricultorScreen from "../screens/OrdersAgricultorScreen";
+import ProductosAgricultorScreen from "../screens/ProductosAgricultorScreen";
 import ProfileScreenAgricultor from "../screens/ProfileScreenAgricultor";
 import SearchAgricultorScreen from "../screens/SearchAgricultorScreen";
-import ProductosAgricultorScreen from "../screens/ProductosAgricultorScreen";
 
 const Stack = createNativeStackNavigator();
 
