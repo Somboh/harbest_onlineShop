@@ -24,7 +24,7 @@ const categoryOptions = [
 
 const previewImages = {
   Frutas: require("../../assets/images/comida/naranjas.webp"),
-  Verduras: require("../../assets/images/comida/verduras.jpeg"),
+  Verduras: require("../../assets/images/comida/verduras.webp"),
   Especias: require("../../assets/images/comida/pimenton.jpg"),
 };
 
