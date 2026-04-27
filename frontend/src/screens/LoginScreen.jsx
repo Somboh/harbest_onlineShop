@@ -3,51 +3,72 @@ import { useRoute } from "@react-navigation/native";
 import { useState } from "react";
 import {
   Image,
+  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-import { useAuth } from "../context/AuthContext";
+import authService from "../services/authService";
 import colors from "../styles/colors";
 
 export default function LoginScreen({ navigation }) {
   const route = useRoute();
   const { role } = route.params || {};
-  const isAdmin = role === "admin" || role === "farmer";
-  const { login, isLoading } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const isUser = role === "user";
+  const isFarmer = role === "farmer";
+
+  let [email, setEmail] = useState("");
+  let [password, setPassword] = useState("");
 
   const themeColors = {
-    primary: isAdmin ? colors.secondary : colors.primary,
+    primary: isFarmer ? colors.secondary : colors.primary,
     text: colors.text,
     textSoft: colors.textSoft,
+    white: colors.white,
   };
 
-  const logoSource = isAdmin
+  const logoSource = isFarmer
     ? require("../../assets/images/agricultor-logo.png")
     : require("../../assets/images/logo-harbest.png");
 
   const handleLogin = async () => {
-    await login({
-      email,
-      role: isAdmin ? "farmer" : "client",
-    });
+    let data = {
+      email: email,
+      contra: password,
+    };
 
-    navigation.reset({
-      index: 0,
-      routes: [{ name: isAdmin ? "HomeAgricultor" : "Home" }],
-    });
+    try {
+      let res;
+
+      if (isFarmer) {
+        res = await authService.farmerLogin(data);
+      } else {
+        res = await authService.userLogin(data);
+      }
+
+      if (res && res.status === "OK") {
+        if (isFarmer) {
+          navigation.navigate("HomeAgricultor");
+        } else {
+          navigation.navigate("Home");
+        }
+      } else {
+        alert("Credenciales incorrectas o error en el servidor");
+      }
+    } catch (error) {
+      console.error("Error ejecutando el login:", error);
+      alert("Hubo un problema al intentar iniciar sesión");
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.container, { backgroundColor: themeColors.primary }]}>
+      <View
+        style={[styles.container, { backgroundColor: themeColors.primary }]}
+      >
+        {/* CABECERA */}
         <View style={styles.topSection}>
           <View style={styles.topRow}>
             <TouchableOpacity onPress={() => navigation.navigate("Splash")}>
@@ -61,11 +82,11 @@ export default function LoginScreen({ navigation }) {
 
           <View style={styles.headerTextBlock}>
             <Text style={styles.headerMiniText}>
-              {isAdmin ? "Acceso agricultor" : "Acceso usuario"}
+              {isFarmer ? "Acceso agricultor" : "Acceso usuario"}
             </Text>
-            <Text style={styles.headerTitle}>Iniciar sesion</Text>
+            <Text style={styles.headerTitle}>Iniciar sesión</Text>
             <Text style={styles.headerSubtitle}>
-              Accede a Harbest y continua comprando producto fresco y de
+              Accede a Harbest y continúa comprando producto fresco y de
               proximidad.
             </Text>
           </View>
@@ -74,80 +95,78 @@ export default function LoginScreen({ navigation }) {
           <View style={styles.decorLeafTwo} />
         </View>
 
+        {/* TARJETA */}
         <View style={styles.card}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Correo electronico</Text>
+            <Text style={styles.label}>Correo electrónico</Text>
             <TextInput
-              value={email}
-              onChangeText={setEmail}
               style={styles.input}
               placeholder="Introduce tu email"
               placeholderTextColor={colors.textSoft}
               keyboardType="email-address"
               autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
             />
           </View>
-
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Contrasena</Text>
+            <Text style={styles.label}>Contraseña</Text>
             <View style={styles.passwordWrapper}>
               <TextInput
+                style={styles.passwordInput}
+                placeholder="Introduce tu contraseña"
+                placeholderTextColor={colors.textSoft}
                 value={password}
                 onChangeText={setPassword}
-                style={styles.passwordInput}
-                placeholder="Introduce tu contrasena"
-                placeholderTextColor={colors.textSoft}
-                secureTextEntry={!showPassword}
+                secureTextEntry
               />
-              <TouchableOpacity onPress={() => setShowPassword((current) => !current)}>
+              <TouchableOpacity>
                 <Text style={[styles.showText, { color: themeColors.primary }]}>
-                  {showPassword ? "Ocultar" : "Mostrar"}
+                  Mostrar
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
-
           <TouchableOpacity style={styles.forgotWrapper}>
             <Text style={[styles.forgotText, { color: themeColors.primary }]}>
-              Has olvidado tu contrasena?
+              ¿Has olvidado tu contraseña?
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.mainButton, { backgroundColor: themeColors.primary }]}
-            onPress={handleLogin}
+            style={[
+              styles.mainButton,
+              { backgroundColor: themeColors.primary },
+            ]}
+            onPress={() => {
+              handleLogin();
+            }}
             activeOpacity={0.85}
-            disabled={isLoading}
           >
-            <Text style={styles.mainButtonText}>
-              {isLoading ? "Entrando..." : "Iniciar sesion"}
-            </Text>
+            <Text style={styles.mainButtonText}>Iniciar sesión</Text>
           </TouchableOpacity>
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>o continua con</Text>
+            <Text style={styles.dividerText}>o continúa con</Text>
             <View style={styles.dividerLine} />
           </View>
-
           <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
             <View style={styles.socialIconCircle}>
               <Text style={styles.socialIconText}>G</Text>
             </View>
             <Text style={styles.socialButtonText}>Continuar con Google</Text>
           </TouchableOpacity>
-
           <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
             <View style={styles.socialIconCircle}>
               <Text style={styles.socialIconText}>f</Text>
             </View>
             <Text style={styles.socialButtonText}>Continuar con Facebook</Text>
           </TouchableOpacity>
-
           <Text style={styles.registerText}>
-            No tienes cuenta?{" "}
+            ¿No tienes cuenta?{" "}
             <Text style={[styles.registerLink, { color: themeColors.primary }]}>
-              Registrate
+              Regístrate
             </Text>
           </Text>
         </View>
@@ -161,47 +180,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+
   container: {
     flex: 1,
   },
+
   topSection: {
     paddingHorizontal: 24,
     paddingTop: 18,
     paddingBottom: 34,
     position: "relative",
   },
+
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 26,
   },
+
   logoImage: {
     width: 42,
     height: 42,
     resizeMode: "contain",
   },
+
   headerTextBlock: {
     paddingRight: 24,
   },
+
   headerMiniText: {
     color: "rgba(255,255,255,0.82)",
     fontSize: 13,
     fontWeight: "600",
     marginBottom: 10,
   },
+
   headerTitle: {
     color: "#fff",
     fontSize: 30,
     fontWeight: "800",
     marginBottom: 10,
   },
+
   headerSubtitle: {
     color: "rgba(255,255,255,0.88)",
     fontSize: 15,
     lineHeight: 22,
     maxWidth: 290,
   },
+
   decorLeafOne: {
     position: "absolute",
     right: 24,
@@ -212,6 +240,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.08)",
     transform: [{ rotate: "28deg" }],
   },
+
   decorLeafTwo: {
     position: "absolute",
     right: 58,
@@ -222,6 +251,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.10)",
     transform: [{ rotate: "-20deg" }],
   },
+
   card: {
     flex: 1,
     backgroundColor: "#FFFFFF",
@@ -236,15 +266,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
+
   inputGroup: {
     marginBottom: 14,
   },
+
   label: {
     fontSize: 13,
     fontWeight: "700",
     color: colors.text,
     marginBottom: 8,
   },
+
   input: {
     backgroundColor: "#F3F5ED",
     borderRadius: 999,
@@ -253,6 +286,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
+
   passwordWrapper: {
     backgroundColor: "#F3F5ED",
     borderRadius: 999,
@@ -262,51 +296,61 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+
   passwordInput: {
     flex: 1,
     fontSize: 14,
     color: colors.text,
   },
+
   showText: {
     fontSize: 12,
     fontWeight: "700",
   },
+
   forgotWrapper: {
     alignSelf: "flex-end",
     marginTop: 2,
     marginBottom: 18,
   },
+
   forgotText: {
     fontSize: 12,
     fontWeight: "600",
   },
+
   mainButton: {
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: "center",
     marginBottom: 22,
   },
+
   mainButtonText: {
     color: "#fff",
     fontSize: 15,
     fontWeight: "800",
   },
+
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 18,
   },
+
   dividerLine: {
     flex: 1,
     height: 1,
     backgroundColor: "#E6E6E6",
   },
+
   dividerText: {
     marginHorizontal: 10,
     fontSize: 12,
     color: colors.textSoft,
     fontWeight: "600",
   },
+
   socialButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -316,6 +360,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginBottom: 12,
   },
+
   socialIconCircle: {
     width: 28,
     height: 28,
@@ -325,22 +370,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
+
   socialIconText: {
     fontSize: 16,
     fontWeight: "800",
     color: colors.text,
   },
+
   socialButtonText: {
     fontSize: 14,
     fontWeight: "600",
     color: colors.text,
   },
+
   registerText: {
     textAlign: "center",
     fontSize: 13,
     color: colors.textSoft,
     marginTop: 10,
   },
+
   registerLink: {
     fontWeight: "800",
   },

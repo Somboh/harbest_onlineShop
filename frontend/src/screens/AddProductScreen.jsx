@@ -81,15 +81,25 @@ export default function AddProductScreen({ navigation }) {
             </View>
 
             <View style={styles.previewCard}>
-              <Image source={previewImages[category]} style={styles.previewImage} />
+              <Image
+                source={previewImages[category]}
+                style={styles.previewImage}
+              />
 
               <View style={styles.previewOverlay}>
                 <View style={styles.previewBadge}>
-                  <Ionicons name="camera-outline" size={14} color={theme.primary} />
+                  <Ionicons
+                    name="camera-outline"
+                    size={14}
+                    color={theme.primary}
+                  />
                   <Text style={styles.previewBadgeText}>Preview</Text>
                 </View>
 
-                <TouchableOpacity style={styles.photoButton} activeOpacity={0.85}>
+                <TouchableOpacity
+                  style={styles.photoButton}
+                  activeOpacity={0.85}
+                >
                   <Ionicons name="image-outline" size={16} color="#fff" />
                   <Text style={styles.photoButtonText}>Cambiar foto</Text>
                 </TouchableOpacity>
@@ -136,7 +146,10 @@ export default function AddProductScreen({ navigation }) {
                   return (
                     <TouchableOpacity
                       key={item.id}
-                      style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+                      style={[
+                        styles.categoryChip,
+                        isActive && styles.categoryChipActive,
+                      ]}
                       onPress={() => setCategory(item.id)}
                       activeOpacity={0.85}
                     >
@@ -199,11 +212,19 @@ export default function AddProductScreen({ navigation }) {
                   return (
                     <TouchableOpacity
                       key={item}
-                      style={[styles.unitChip, isActive && styles.unitChipActive]}
+                      style={[
+                        styles.unitChip,
+                        isActive && styles.unitChipActive,
+                      ]}
                       onPress={() => setUnit(item)}
                       activeOpacity={0.85}
                     >
-                      <Text style={[styles.unitChipText, isActive && styles.unitChipTextActive]}>
+                      <Text
+                        style={[
+                          styles.unitChipText,
+                          isActive && styles.unitChipTextActive,
+                        ]}
+                      >
                         {item}
                       </Text>
                     </TouchableOpacity>
@@ -214,13 +235,18 @@ export default function AddProductScreen({ navigation }) {
 
             <View style={styles.summaryCard}>
               <View style={styles.summaryIcon}>
-                <Ionicons name="storefront-outline" size={20} color={theme.primary} />
+                <Ionicons
+                  name="storefront-outline"
+                  size={20}
+                  color={theme.primary}
+                />
               </View>
 
               <View style={styles.summaryTextBlock}>
                 <Text style={styles.summaryTitle}>Listo para publicar</Text>
                 <Text style={styles.summaryText}>
-                  El producto aparecera en tu inventario y podras editarlo cuando lo necesites.
+                  El producto aparecera en tu inventario y podras editarlo
+                  cuando lo necesites.
                 </Text>
               </View>
             </View>

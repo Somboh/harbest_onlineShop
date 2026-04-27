@@ -35,6 +35,7 @@ export class ProductService {
     
             //una vez guardada la foto se almacena el producto (ya que foto en producto es una clave ajena)
             const id = randomString();
+
             const { error:errorProduct } = await this.db.getClient().from("producto").insert({
                 id,
                 nombre: product.nombre,
@@ -42,7 +43,9 @@ export class ProductService {
                 descripcion: product.descripcion,
                 precio: product.precio,
                 cantidad: product.cantidad,
-                email_agricultor: product.email_agricultor
+                email_agricultor: product.email_agricultor,
+                categoria: product.categoria,
+                valoracion: 0,
             });
     
             if(errorProduct){
@@ -107,7 +110,9 @@ export class ProductService {
                     descripcion: product.descripcion,
                     precio: product.precio,
                     cantidad: product.cantidad,
-                    email_agricultor: product.email_agricultor
+                    email_agricultor: product.email_agricultor,
+                    categoria: product.categoria,
+                    valoracion: product.valoracion,
                 }).eq("id", id);
                 //se borra la imagen del servidor local una vez subida a cloudinary
                 if(fotoErrorUpdate){
@@ -134,7 +139,9 @@ export class ProductService {
                     descripcion: product.descripcion,
                     precio: product.precio,
                     cantidad: product.cantidad,
-                    email_agricultor: product.email_agricultor
+                    email_agricultor: product.email_agricultor,
+                    categoria: product.categoria,
+                    valoracion: product.valoracion,
                 }).eq("id", id);
             } catch (error) {
                 throw new Error("Error al actualizar el producto en la base de datos: " + error.message);

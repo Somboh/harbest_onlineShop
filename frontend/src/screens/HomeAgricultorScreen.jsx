@@ -34,19 +34,27 @@ export default function HomeAgricultorScreen({ navigation }) {
               activeOpacity={0.85}
             >
               <Ionicons name="arrow-back" size={22} color={display.text} />
-              <Text style={[styles.headerText, { color: display.text }]}>Inicio</Text>
+              <Text style={[styles.headerText, { color: display.text }]}>
+                Inicio
+              </Text>
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
               <TouchableOpacity
                 style={[
                   styles.logoButton,
-                  { backgroundColor: display.surface, borderColor: display.border },
+                  {
+                    backgroundColor: display.surface,
+                    borderColor: display.border,
+                  },
                 ]}
                 onPress={() => navigation.navigate("ProfileAgricultor")}
                 activeOpacity={0.85}
               >
-                <Image source={ROLE_THEMES.farmer.logo} style={styles.logoImage} />
+                <Image
+                  source={ROLE_THEMES.farmer.logo}
+                  style={styles.logoImage}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -76,8 +84,17 @@ export default function HomeAgricultorScreen({ navigation }) {
             ]}
           >
             <View style={styles.heroContent}>
-              <View style={[styles.heroBadge, { backgroundColor: display.primarySoft }]}>
-                <Text style={[styles.heroBadgeText, { color: display.primary }]}>Panel agricultor</Text>
+              <View
+                style={[
+                  styles.heroBadge,
+                  { backgroundColor: display.primarySoft },
+                ]}
+              >
+                <Text
+                  style={[styles.heroBadgeText, { color: display.primary }]}
+                >
+                  Panel agricultor
+                </Text>
               </View>
 
               <Text style={[styles.heroTitle, { color: display.text }]}>
@@ -85,30 +102,77 @@ export default function HomeAgricultorScreen({ navigation }) {
               </Text>
 
               <Text style={[styles.heroSubtitle, { color: display.textSoft }]}>
-                Controla productos, stock y pedidos con una vista clara de tu actividad.
+                Controla productos, stock y pedidos con una vista clara de tu
+                actividad.
               </Text>
             </View>
 
             <Image source={ROLE_THEMES.farmer.logo} style={styles.heroImage} />
           </View>
 
-          <Text style={[styles.mainTitle, { color: display.text }]}>Mis productos</Text>
+          <Text style={[styles.mainTitle, { color: display.text }]}>
+            Mis productos
+          </Text>
 
           <View style={styles.categories}>
-            <CategoryItem color={display.categoryColors[0]} icon="logo-apple" title="FRUTAS" />
-            <CategoryItem color={display.categoryColors[1]} icon="leaf" title="VERDURAS" />
-            <CategoryItem color={display.categoryColors[2]} icon="nutrition" title="ESPECIAS" />
-            <CategoryItem color={display.categoryColors[3]} icon="barcode-outline" title="VER TODO" />
+            <CategoryItem
+              color={display.categoryColors[0]}
+              icon="logo-apple"
+              title="FRUTAS"
+              onPress={() =>
+                navigation.navigate("ProductosAgricultor", {
+                  category: "Frutas",
+                })
+              }
+            />
+            <CategoryItem
+              color={display.categoryColors[1]}
+              icon="leaf"
+              title="VERDURAS"
+              onPress={() =>
+                navigation.navigate("ProductosAgricultor", {
+                  category: "Verduras",
+                })
+              }
+            />
+            <CategoryItem
+              color={display.categoryColors[2]}
+              icon="nutrition"
+              title="ESPECIAS"
+              onPress={() =>
+                navigation.navigate("ProductosAgricultor", {
+                  category: "Especias",
+                })
+              }
+            />
+            <CategoryItem
+              color={display.categoryColors[3]}
+              icon="barcode-outline"
+              title="VER TODO"
+              onPress={() =>
+                navigation.navigate("ProductosAgricultor", {
+                  category: "Todos",
+                })
+              }
+            />
           </View>
 
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={[styles.sectionTitle, { color: display.text }]}>Ultimos añadidos</Text>
-              <Text style={[styles.sectionSubtitle, { color: display.textSoft }]}>Productos visibles en tu inventario</Text>
+              <Text style={[styles.sectionTitle, { color: display.text }]}>
+                Ultimos añadidos
+              </Text>
+              <Text
+                style={[styles.sectionSubtitle, { color: display.textSoft }]}
+              >
+                Productos visibles en tu inventario
+              </Text>
             </View>
 
             <TouchableOpacity onPress={() => navigation.navigate("Inventory")}>
-              <Text style={[styles.seeAllText, { color: display.primary }]}>Ver todo</Text>
+              <Text style={[styles.seeAllText, { color: display.primary }]}>
+                Ver todo
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -130,10 +194,11 @@ export default function HomeAgricultorScreen({ navigation }) {
   );
 }
 
-const CategoryItem = ({ color, icon, title }) => (
+const CategoryItem = ({ color, icon, title, onPress }) => (
   <TouchableOpacity
     style={[styles.categoryBox, { backgroundColor: color }]}
     activeOpacity={0.9}
+    onPress={onPress}
   >
     <Ionicons name={icon} size={22} color="#FFF" style={styles.categoryIcon} />
     <Text style={styles.categoryTitle}>{title}</Text>
@@ -156,7 +221,10 @@ const ProductCard = ({ product, display, onPress }) => (
     <Image source={product.image} style={styles.cardImage} />
 
     <View style={styles.cardInfo}>
-      <Text style={[styles.cardName, { color: display.text }]} numberOfLines={1}>
+      <Text
+        style={[styles.cardName, { color: display.text }]}
+        numberOfLines={1}
+      >
         {product.name}
       </Text>
       <Text style={[styles.cardQty, { color: display.textSoft }]}>
@@ -165,7 +233,9 @@ const ProductCard = ({ product, display, onPress }) => (
     </View>
 
     <View style={[styles.cardBadge, { backgroundColor: display.primarySoft }]}>
-      <Text style={[styles.cardBadgeText, { color: display.primary }]}>{product.category}</Text>
+      <Text style={[styles.cardBadgeText, { color: display.primary }]}>
+        {product.category}
+      </Text>
     </View>
   </TouchableOpacity>
 );
