@@ -14,7 +14,7 @@ export default () => ({
     },
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
     jwt_secret: process.env.JWT_SECRET,
-    
+
     supabase: {
         url: process.env.SUPABASE_URL,
         serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,

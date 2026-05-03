@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { User } from './user.dto';
+import { ChangePasswordDto, UpdateProfileDto, User } from './user.dto';
 import { CloudinaryService } from 'src/Cloudinary/cloudinary.service';
 import { DatabaseService } from 'src/database/database.service';
 import bcrypt from 'bcryptjs';
@@ -90,6 +90,86 @@ export class UserService {
     }
     return {status: "OK", message:"Usuario actualizado"};
   }
+  //Devuelve el usuario actual (a partir del id del JWT) sin la contraseña.
+  async getMe(userId: string){
+    const {data, error} = await this.db.getClient()
+      .from("usuario")
+      .select("id, nombre, email, foto")
+      .eq("id", userId)
+      .single();
+    if(error || !data){
+      throw new Error("Usuario no encontrado");
+    }
+    return data;
+  }
+
+  //Actualiza nombre y email. NO toca la contraseña ni la foto: para eso
+  //hay endpoints específicos.
+  async updateProfile(userId: string, body: UpdateProfileDto){
+    const nombre = body?.nombre?.trim();
+    const email = body?.email?.trim().toLowerCase();
+    if(!nombre || !email){
+      return {status: "ERROR", message: "Nombre y email son obligatorios"};
+    }
+
+    //Comprueba que el email no esté usado por OTRO usuario.
+    const {data: existing} = await this.db.getClient()
+      .from("usuario")
+      .select("id")
+      .eq("email", email)
+      .neq("id", userId)
+      .maybeSingle();
+    if(existing){
+      return {status: "ERROR", message: "Ese email ya está en uso por otra cuenta"};
+    }
+
+    const {error} = await this.db.getClient()
+      .from("usuario")
+      .update({nombre, email})
+      .eq("id", userId);
+
+    if(error){
+      return {status: "ERROR", message: "Error al actualizar el perfil: " + error.message};
+    }
+    return {status: "OK", message: "Perfil actualizado", user: {id: userId, nombre, email}};
+  }
+
+  //Cambio de contraseña con verificación de la actual.
+  async changePassword(userId: string, body: ChangePasswordDto){
+    if(!body?.currentPassword || !body?.newPassword){
+      return {status: "ERROR", message: "Faltan los campos de contraseña"};
+    }
+    if(body.newPassword.length < 6){
+      return {status: "ERROR", message: "La nueva contraseña debe tener al menos 6 caracteres"};
+    }
+
+    const {data: usr, error} = await this.db.getClient()
+      .from("usuario")
+      .select("id, contra")
+      .eq("id", userId)
+      .single();
+    if(error || !usr){
+      return {status: "ERROR", message: "Usuario no encontrado"};
+    }
+
+    const ok = await bcrypt.compare(body.currentPassword, usr.contra);
+    if(!ok){
+      return {status: "ERROR", message: "La contraseña actual no es correcta"};
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashed = await bcrypt.hash(body.newPassword, salt);
+    const {error: updateError} = await this.db.getClient()
+      .from("usuario")
+      .update({contra: hashed})
+      .eq("id", userId);
+
+    if(updateError){
+      return {status: "ERROR", message: "Error al cambiar la contraseña: " + updateError.message};
+    }
+    return {status: "OK", message: "Contraseña actualizada"};
+  }
+
   async deleteUser(userId:string) {
     const {data:usr} = await this.db.getClient().from("usuario").select("*").eq("id", userId).single();
     if(!usr){

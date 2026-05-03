@@ -4,23 +4,40 @@ import { randomString } from 'src/Global';
 import * as fs from 'fs/promises';
 import { DatabaseService } from "src/database/database.service";
 import { CloudinaryService } from "src/Cloudinary/cloudinary.service";
+//Aplana cada fila producto+fotos en un objeto con foto_url plana, así el
+//frontend puede consumirlo sin saber del join.
+function flattenWithPhoto(rows: any[] | null) {
+    return (rows ?? []).map((row) => {
+        const { fotos, ...rest } = row ?? {};
+        return { ...rest, foto_url: fotos?.path ?? null };
+    });
+}
+
 @Injectable()
 export class ProductService {
     constructor(private cloudinaryService: CloudinaryService, private db:DatabaseService){}
 
     async getAllProducts(){
-        const {data} = await this.db.getClient().from("producto").select("*");
-        return data;
+        const {data} = await this.db.getClient()
+            .from("producto")
+            .select("*, fotos:foto(path)");
+        return flattenWithPhoto(data);
     }
 
     async getProductById(id: string){
-        const {data} = await this.db.getClient().from("producto").select("*").eq("id", id);
-        return data;
-    }   
+        const {data} = await this.db.getClient()
+            .from("producto")
+            .select("*, fotos:foto(path)")
+            .eq("id", id);
+        return flattenWithPhoto(data);
+    }
 
     async getProductsByFarmer(farmerId: string){
-        const {data} = await this.db.getClient().from("producto").select("*").eq("email_agricultor", farmerId);
-        return data;
+        const {data} = await this.db.getClient()
+            .from("producto")
+            .select("*, fotos:foto(path)")
+            .eq("email_agricultor", farmerId);
+        return flattenWithPhoto(data);
     }
 
     async createProduct(product: Product, foto: Express.Multer.File) {
@@ -170,24 +187,48 @@ export class ProductService {
        if(data.foto){
             //saco de la BD la foto para borrarla de cloudinary
             const {data:fotoBD,error:fotoError} = await this.db.getClient().from("fotos").select("*").eq("id", data.foto).single();
-            if(fotoError || !fotoBD){
-                throw new Error("Foto no encontrada");
-            }
-
-            try {
-                await this.cloudinaryService.deleteImage(fotoBD.id)
-            } catch (error) {
-                throw new Error("Error al borrar la imagen de cloudinary: " + error.message);
-            }
-
-            //se borra el producto de la BD y luego la foto de la BD
-            try {
-                await this.db.getClient().from("producto").delete().eq("id", id);
-                await this.db.getClient().from("fotos").delete().eq("id", data.foto);
-            } catch (error) {
-                throw new Error("Error al borrar el producto o la foto de la base de datos: " + error.message);
+            if(!fotoError && fotoBD){
+                try {
+                    await this.cloudinaryService.deleteImage(fotoBD.id)
+                } catch (error) {
+                    throw new Error("Error al borrar la imagen de cloudinary: " + error.message);
+                }
             }
        }
+
+       //borramos el producto SIEMPRE (tenga foto o no) y luego la foto si existía
+       try {
+            const {error: errorDelete} = await this.db.getClient().from("producto").delete().eq("id", id);
+            if(errorDelete){
+                throw new Error("Error al borrar el producto: " + errorDelete.message);
+            }
+            if(data.foto){
+                await this.db.getClient().from("fotos").delete().eq("id", data.foto);
+            }
+       } catch (error) {
+            throw new Error("Error al borrar el producto o la foto de la base de datos: " + error.message);
+       }
        return {status: "OK", message:"Producto eliminado"};
+    }
+
+    async getProductsByCategory(categoria: string){
+        const {data} = await this.db.getClient()
+            .from("producto")
+            .select("*, fotos:foto(path)")
+            .eq("categoria", categoria);
+        return flattenWithPhoto(data);
+    }
+
+    async searchProducts(q: string){
+        if(!q || q.trim().length === 0){
+            return [];
+        }
+        //Buscamos por nombre y traemos también la URL de la foto desde la tabla
+        //fotos para que el frontend pueda pintar la miniatura sin una segunda llamada.
+        const {data} = await this.db.getClient()
+            .from("producto")
+            .select("*, fotos:foto(path)")
+            .ilike("nombre", `%${q.trim()}%`);
+        return flattenWithPhoto(data);
     }
 }

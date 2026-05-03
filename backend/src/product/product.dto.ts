@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsInt, IsNotEmpty, IsString,IsNumber } from "class-validator";
+import { IsNotEmpty, IsString, IsNumber } from "class-validator";
 
 export class Product {
     @IsString()
@@ -10,12 +10,12 @@ export class Product {
     @IsNotEmpty()
     descripcion: String;
 
-    @IsInt()
+    @IsNumber()
     @IsNotEmpty()
     @Type(() => Number) //para transformar el valor a número, ya que viene como string en el body
     precio: number;
-    
-    @IsInt()
+
+    @IsNumber()
     @IsNotEmpty()
     @Type(() => Number) //para transformar el valor a número, ya que viene como string en el body
     cantidad: number;

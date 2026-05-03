@@ -48,28 +48,28 @@ export class AuthService {
             //Se crea un nuevo usuario con los datos proporcionados
             //Si el email ya existe, se devuelve un error automatico
             //Por la carácteristica de unique en la BD
-            
+
             //subo la foto de perfil a cloudinary y obtengo la URL para guardarla en la base de datos
             const resFoto = await this.cloudinaryService.uploadImage(foto.path);
             if(!resFoto || resFoto.error){
                 throw new Error("Error al subir la imagen");
             }
-            
+
             //subo la url a la base da datos en fotos
             const {error} = await this.db.getClient()
             .from('fotos')
             .insert({path: resFoto.secure_url, id: resFoto.public_id})
-            
+
             if(error){
                 return {status:'ERROR', message:'Error al registrar usuario: '+error.message};
             }
-            
+
             const salt = await bcrypt.genSalt(10);
-            
+
             //encriptar la contraseña antes de guardarla en la base de datos
             user.contra = await bcrypt.hash(user.contra, salt);
-            
-            
+
+
             let id = randomString();
             //subo el usuario a la base de datos, con la url de la foto como clave ajena
             await this.db.getClient().from('usuario').insert({
@@ -119,7 +119,7 @@ export class AuthService {
             //Se crea un nuevo agricultor con los datos proporcionados
             //Si el email ya existe, se devuelve un error automatico
             //Por la carácteristica de unique:true en el esquema de agricultor
-            
+
             //subo la foto de perfil a cloudinary y obtengo la URL para guardarla en la base de datos
             const resFoto = await this.cloudinaryService.uploadImage(foto.path);
 
@@ -129,17 +129,17 @@ export class AuthService {
 
             //subo la url a la base da datos en fotos
             const { error } = await this.db.getClient().from('fotos').insert({path: resFoto.secure_url, id: resFoto.public_id});
-            
+
             if(error){
                 return {status:'ERROR', message:'Error al registrar agricultor: ' + error.message};
              }
 
             let id = randomString();
             const salt = await bcrypt.genSalt(10);
-    
+
             //encriptar la contraseña antes de guardarla en la base de datos
             farmer.contra = await bcrypt.hash(farmer.contra, salt);
-            
+
            const {error:errorAgricultor} = await this.db.getClient().from('agricultor').insert({
                 id: id,
                 nombre: farmer.nombre,

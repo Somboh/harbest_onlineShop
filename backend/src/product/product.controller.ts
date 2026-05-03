@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ProductService } from "./product.service";
 import { Product } from "./product.dto";
 import { AuthGuard } from "src/Auth/auth.guard";
@@ -15,14 +15,24 @@ export class ProductController {
         return await this.productService.getAllProducts();
     }
     
-    @Get("/:id")
-    async getProductById(id: string){
-        return await this.productService.getProductById(id);
+    @Get("/search")
+    async searchProducts(@Query("q") q: string){
+        return await this.productService.searchProducts(q);
     }
-    
+
+    @Get("/category/:categoria")
+    async getProductsByCategory(@Param("categoria") categoria: string){
+        return await this.productService.getProductsByCategory(categoria);
+    }
+
     @Get("/farmer/:farmerId")
-    async getProductsByFarmer(farmerId: string){
+    async getProductsByFarmer(@Param("farmerId") farmerId: string){
         return await this.productService.getProductsByFarmer(farmerId);
+    }
+
+    @Get("/:id")
+    async getProductById(@Param("id") id: string){
+        return await this.productService.getProductById(id);
     }
     
     @UseGuards(AuthGuard)
