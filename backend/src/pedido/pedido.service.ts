@@ -40,10 +40,22 @@ export class PedidoService {
 
         const { data: lineas } = await this.db.getClient()
             .from("pedido_producto")
-            .select("*, producto:product_id(id, nombre, foto, categoria)")
+            .select("*, producto:product_id(id, nombre, foto, categoria, fotos:foto(path))")
             .eq("pedido_id", id);
 
-        return { ...pedido, lineas: lineas ?? [] };
+        //Aplanamos foto_url para que el frontend pinte la miniatura sin tener
+        //que conocer el join con la tabla fotos.
+        const lineasConFoto = (lineas ?? []).map((l: any) => {
+            const producto = l?.producto;
+            if (!producto) return l;
+            const { fotos, ...prodRest } = producto;
+            return {
+                ...l,
+                producto: { ...prodRest, foto_url: fotos?.path ?? null },
+            };
+        });
+
+        return { ...pedido, lineas: lineasConFoto };
     }
 
     async createPedido(dto: CreatePedidoDTO) {
