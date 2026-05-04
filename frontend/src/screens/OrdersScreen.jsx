@@ -1,38 +1,72 @@
-import React from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
+  ActivityIndicator,
   Image,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-import colors from '../styles/colors';
-import ScreenContainer from '../components/common/ScreenContainer';
+import ScreenContainer from "../components/common/ScreenContainer";
+import authService from "../services/authService";
+import ordersService, {
+  groupOrdersByPurchase,
+} from "../services/ordersService";
+import colors from "../styles/colors";
+import { useResponsive } from "../hooks/useResponsive";
+
+function formatDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd} · ${mm} · ${yyyy}`;
+}
 
 export default function OrdersScreen({ navigation }) {
-  const orders = [
-    {
-      id: '0000000000',
-      user: 'Pepe',
-      date: '12 · 02 · 2026',
-      status: 'Pendiente',
-    },
-    {
-      id: '0000000000',
-      user: 'Pepe',
-      date: '12 · 02 · 2026',
-      status: 'Entregado',
-    },
-    {
-      id: '0000000000',
-      user: 'Pepe',
-      date: '12 · 02 · 2026',
-      status: 'Pendiente',
-    },
-  ];
+  const { isDesktop, isTablet } = useResponsive();
+  const wide = isDesktop || isTablet;
+
+  const [purchases, setPurchases] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const reload = useCallback(async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const user = await authService.getCurrentUser();
+      if (!user?.email) {
+        setError("Sesión caducada. Vuelve a iniciar sesión.");
+        setPurchases([]);
+        return;
+      }
+      const data = await ordersService.getOrdersByUser(user.email);
+      //Agrupamos los pedidos de un mismo checkout en una "compra" — la lista
+      //muestra una tarjeta por compra, no por pedido suelto.
+      setPurchases(groupOrdersByPurchase(data));
+    } catch (err) {
+      console.error("Error cargando pedidos:", err);
+      setError(err?.message ?? "No se pudieron cargar los pedidos");
+      setPurchases([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  //Refrescar cada vez que la pantalla recibe el foco (volver del checkout o
+  //de un detalle).
+  useFocusEffect(
+    useCallback(() => {
+      reload();
+    }, [reload]),
+  );
 
   return (
     <ScreenContainer>
@@ -47,9 +81,9 @@ export default function OrdersScreen({ navigation }) {
                 <Ionicons name="arrow-back" size={22} color="#fff" />
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+              <TouchableOpacity onPress={() => navigation.navigate("Home")}>
                 <Image
-                  source={require('../../assets/images/logo-harbest.png')}
+                  source={require("../../assets/images/logo-harbest.png")}
                   style={styles.headerLogo}
                 />
               </TouchableOpacity>
@@ -62,403 +96,251 @@ export default function OrdersScreen({ navigation }) {
                 Consulta el estado actual de tus pedidos de forma rápida.
               </Text>
             </View>
-
-            <View style={styles.decorLeafOne} />
-            <View style={styles.decorLeafTwo} />
           </View>
 
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Tus pedidos</Text>
-              <Text style={styles.sectionSubtitle}>
-                Seguimiento del proceso de entrega
-              </Text>
+          {loading ? (
+            <View style={styles.center}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={styles.centerText}>Cargando tus pedidos...</Text>
             </View>
-          </View>
-
-          {orders.map((order, index) => (
-            <OrderCard key={index} order={order} />
-          ))}
+          ) : error ? (
+            <View style={[styles.card, styles.errorCard]}>
+              <Ionicons name="cloud-offline-outline" size={26} color="#B3533D" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={reload}>
+                <Text style={styles.retryText}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : purchases.length === 0 ? (
+            <View style={styles.card}>
+              <Ionicons name="receipt-outline" size={28} color={colors.primary} />
+              <Text style={styles.emptyTitle}>Aún no tienes pedidos</Text>
+              <Text style={styles.emptySubtitle}>
+                Cuando hagas tu primera compra aparecerá aquí.
+              </Text>
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() => navigation.navigate("Home")}
+              >
+                <Text style={styles.primaryButtonText}>Ir al catálogo</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.listWrap}>
+              <View style={wide ? styles.ordersGridWide : null}>
+                {purchases.map((purchase) => (
+                  <PurchaseCard
+                    key={purchase.id}
+                    purchase={purchase}
+                    wide={wide}
+                    onPress={() =>
+                      navigation.navigate("PurchaseDetail", {
+                        purchaseKey: purchase.id,
+                      })
+                    }
+                  />
+                ))}
+              </View>
+            </View>
+          )}
         </ScrollView>
 
-        <View style={styles.bottomBar}>
-          <TouchableOpacity onPress={() => navigation.navigate('Search')}>
-            <Ionicons name="search-outline" size={20} color="#8A8A8A" />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
-            <Ionicons name="heart-outline" size={20} color="#8A8A8A" />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
-            <Ionicons name="cart-outline" size={20} color="#8A8A8A" />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('ProfileUser')}>
-            <Ionicons name="person-outline" size={20} color="#8A8A8A" />
-          </TouchableOpacity>
-        </View>
+        {!isDesktop && (
+          <View style={styles.bottomBar}>
+            <TouchableOpacity onPress={() => navigation.navigate("Search")}>
+              <Ionicons name="search-outline" size={20} color="#8A8A8A" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate("Favorites")}>
+              <Ionicons name="heart-outline" size={20} color="#8A8A8A" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate("Cart")}>
+              <Ionicons name="cart-outline" size={20} color="#8A8A8A" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate("ProfileUser")}>
+              <Ionicons name="person-outline" size={20} color="#8A8A8A" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </ScreenContainer>
   );
 }
 
-const OrderCard = ({ order }) => {
-  const isDelivered = order.status === 'Entregado';
+function PurchaseCard({ purchase, wide, onPress }) {
+  const orderWord = purchase.orderCount === 1 ? "pedido" : "pedidos";
+  const farmerWord = purchase.farmerCount === 1 ? "agricultor" : "agricultores";
 
   return (
     <TouchableOpacity
-      style={[
-        styles.orderCard,
-        isDelivered ? styles.orderCardDelivered : styles.orderCardPending,
-      ]}
+      style={[styles.orderCard, wide && styles.orderCardWide]}
       activeOpacity={0.9}
+      onPress={onPress}
     >
       <View style={styles.orderTop}>
-        <View style={styles.boxIconWrap}>
-          <Ionicons
-            name="cube-outline"
-            size={54}
-            color={isDelivered ? '#B8D88B' : '#E4D78D'}
-          />
+        <View style={styles.iconWrap}>
+          <Ionicons name="bag-handle-outline" size={42} color={colors.primary} />
         </View>
 
         <View style={styles.orderInfo}>
-          <Text
-            style={[
-              styles.orderStatus,
-              isDelivered ? styles.orderStatusDelivered : styles.orderStatusPending,
-            ]}
-          >
-            {order.status.toUpperCase()}
+          <Text style={styles.orderTitle}>Compra del {formatDate(purchase.fecha)}</Text>
+          <Text style={styles.orderText}>
+            {purchase.orderCount} {orderWord} · {purchase.farmerCount} {farmerWord}
           </Text>
-
-          <Text style={styles.orderTitle}>Pedido #{order.id}</Text>
-          <Text style={styles.orderText}>Para: {order.user}</Text>
-          <Text style={styles.orderText}>Fecha: {order.date}</Text>
+          <Text style={styles.orderTotal}>{purchase.total.toFixed(2)} €</Text>
         </View>
 
-        <TouchableOpacity style={styles.arrowButton} activeOpacity={0.8}>
-          <Ionicons
-            name="chevron-forward"
-            size={24}
-            color={isDelivered ? '#8EBE71' : '#C77A72'}
-          />
-        </TouchableOpacity>
+        <Ionicons name="chevron-forward" size={22} color="#B5B5B5" />
       </View>
-
-      {!isDelivered ? (
-        <View style={styles.progressWrap}>
-          <View style={styles.progressStartCircle}>
-            <View style={styles.progressStartInner} />
-          </View>
-
-          <View style={styles.progressLine} />
-
-          <View style={styles.progressCenterIcon}>
-            <Ionicons
-              name="car-sport-outline"
-              size={34}
-              color="#8A8A8A"
-            />
-          </View>
-
-          <View style={styles.progressLineDashed} />
-
-          <View style={styles.progressEndDot} />
-        </View>
-      ) : (
-        <View style={styles.progressWrapDelivered}>
-          <View style={styles.progressStartCircle}>
-            <View style={styles.progressStartInner} />
-          </View>
-
-          <View style={styles.progressLineDelivered} />
-
-          <View style={styles.progressDeliveredCheck}>
-            <Ionicons
-              name="checkmark"
-              size={20}
-              color="#7DB56A"
-            />
-          </View>
-        </View>
-      )}
     </TouchableOpacity>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F7F8F4',
-  },
-
-  scrollContent: {
-    paddingBottom: 120,
-  },
+  container: { flex: 1, backgroundColor: "#F7F8F4" },
+  scrollContent: { paddingBottom: 120 },
 
   topSection: {
     backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingTop: 18,
-    paddingBottom: 34,
+    paddingBottom: 30,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    position: 'relative',
-    overflow: 'hidden',
     marginBottom: 18,
   },
-
   topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 26,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 22,
   },
-
-  headerLogo: {
-    width: 40,
-    height: 40,
-    resizeMode: 'contain',
-  },
-
-  headerTextBlock: {
-    paddingRight: 30,
-  },
-
+  headerLogo: { width: 40, height: 40, resizeMode: "contain" },
+  headerTextBlock: { paddingRight: 30 },
   headerMiniText: {
-    color: 'rgba(255,255,255,0.82)',
+    color: "rgba(255,255,255,0.82)",
     fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 10,
+    fontWeight: "600",
+    marginBottom: 8,
   },
-
-  headerTitle: {
-    color: '#fff',
-    fontSize: 30,
-    fontWeight: '800',
-    marginBottom: 10,
-  },
-
+  headerTitle: { color: "#fff", fontSize: 28, fontWeight: "800", marginBottom: 8 },
   headerSubtitle: {
-    color: 'rgba(255,255,255,0.88)',
-    fontSize: 15,
-    lineHeight: 22,
-    maxWidth: 290,
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 14,
+    lineHeight: 20,
+    maxWidth: 340,
   },
 
-  decorLeafOne: {
-    position: 'absolute',
-    right: 24,
-    bottom: 28,
-    width: 56,
-    height: 56,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    transform: [{ rotate: '28deg' }],
-  },
+  center: { paddingVertical: 40, alignItems: "center", gap: 10 },
+  centerText: { color: colors.textSoft, fontWeight: "600" },
 
-  decorLeafTwo: {
-    position: 'absolute',
-    right: 60,
-    bottom: 46,
-    width: 28,
-    height: 28,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    transform: [{ rotate: '-20deg' }],
-  },
-
-  sectionHeader: {
+  card: {
     marginHorizontal: 20,
-    marginBottom: 14,
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    padding: 24,
+    alignItems: "center",
+    gap: 8,
   },
-
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.text,
+  errorCard: { backgroundColor: "#FBE9E5" },
+  errorText: {
+    color: "#8C2A1A",
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
   },
+  retryButton: {
+    marginTop: 8,
+    backgroundColor: "#fff",
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  retryText: { color: "#8C2A1A", fontWeight: "800" },
 
-  sectionSubtitle: {
+  emptyTitle: { fontSize: 18, fontWeight: "800", color: colors.text, marginTop: 4 },
+  emptySubtitle: {
     fontSize: 13,
     color: colors.textSoft,
-    marginTop: 2,
+    textAlign: "center",
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  primaryButtonText: { color: "#fff", fontWeight: "800", fontSize: 14 },
+
+  listWrap: { paddingHorizontal: 20 },
+  ordersGridWide: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 16,
   },
 
   orderCard: {
-    marginHorizontal: 20,
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    padding: 16,
     marginBottom: 14,
-    borderRadius: 24,
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 3,
   },
-
-  orderCardPending: {
-    backgroundColor: '#F1EFCF',
+  orderCardWide: {
+    flexBasis: 360,
+    flexGrow: 1,
+    minWidth: 320,
+    marginBottom: 0,
   },
-
-  orderCardDelivered: {
-    backgroundColor: '#E4F0CF',
+  orderTop: { flexDirection: "row", alignItems: "center" },
+  iconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    backgroundColor: "#EEF5E3",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
   },
-
-  orderTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
+  orderInfo: { flex: 1, gap: 4 },
+  statusBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginBottom: 4,
   },
-
-  boxIconWrap: {
-    width: 96,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  boxPending: {},
-
-  boxDelivered: {},
-
-  orderInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-
-  orderStatus: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 10,
-    alignSelf: 'flex-end',
-  },
-
-  orderStatusPending: {
-    color: '#C77A72',
-  },
-
-  orderStatusDelivered: {
-    color: '#7DB56A',
-  },
-
-  orderTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#7E7E7E',
-    marginBottom: 6,
-  },
-
-  orderText: {
-    fontSize: 13,
-    color: '#8A8A8A',
-    marginBottom: 2,
-    fontWeight: '500',
-  },
-
-  arrowButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingLeft: 8,
-  },
-
-  progressEndDotDelivered: {
-    backgroundColor: '#8A8A8A',
+  statusText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.4 },
+  orderTitle: { fontSize: 15, fontWeight: "800", color: colors.text },
+  orderText: { fontSize: 12, color: colors.textSoft },
+  orderTotal: {
+    marginTop: 4,
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.primary,
   },
 
   bottomBar: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 18,
     left: 32,
     right: 32,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 999,
     paddingHorizontal: 24,
     paddingVertical: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
     shadowRadius: 14,
     elevation: 6,
   },
-
-  progressWrap: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  paddingHorizontal: 8,
-},
-
-progressWrapDelivered: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  paddingHorizontal: 8,
-},
-
-progressStartCircle: {
-  width: 26,
-  height: 26,
-  borderRadius: 13,
-  borderWidth: 3,
-  borderColor: '#8A8A8A',
-  justifyContent: 'center',
-  alignItems: 'center',
-  backgroundColor: 'transparent',
-},
-
-progressStartInner: {
-  width: 10,
-  height: 10,
-  borderRadius: 5,
-  backgroundColor: '#8A8A8A',
-},
-
-progressLine: {
-  flex: 1,
-  height: 2,
-  backgroundColor: '#9A9A9A',
-},
-
-progressCenterIcon: {
-  marginHorizontal: 8,
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-
-progressLineDashed: {
-  flex: 1,
-  height: 1,
-  borderStyle: 'dashed',
-  borderWidth: 1,
-  borderColor: '#B6B6B6',
-  borderRadius: 1,
-},
-
-progressEndDot: {
-  width: 16,
-  height: 16,
-  borderRadius: 8,
-  backgroundColor: '#8A8A8A',
-  marginLeft: 8,
-},
-
-progressLineDelivered: {
-  flex: 1,
-  height: 2,
-  backgroundColor: '#9A9A9A',
-  marginLeft: 8,
-  marginRight: 10,
-},
-
-progressDeliveredCheck: {
-  width: 34,
-  height: 34,
-  borderRadius: 17,
-  borderWidth: 3,
-  borderColor: '#8A8A8A',
-  backgroundColor: 'transparent',
-  justifyContent: 'center',
-  alignItems: 'center',
-}
-
 });

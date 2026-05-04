@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -13,7 +13,8 @@ import ScreenContainer from "../components/common/ScreenContainer";
 import QuantitySelector from "../components/products/QuantitySelector";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
-import { getProductById } from "../data/mockProducts";
+import { hydrateProduct } from "../data/productAdapter";
+import productsService from "../services/productsService";
 import colors from "../styles/colors";
 import { formatPrice } from "../utils/formatPrice";
 
@@ -21,12 +22,83 @@ export default function ProductDetailScreen({ navigation, route }) {
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const product = getProductById(route?.params?.productId);
-  const productIsFavorite = isFavorite(product.id);
 
+  const requestedId = route?.params?.productId;
+
+  //product = null mientras carga; "not-found" si el backend no lo encontró.
+  const [product, setProduct] = useState(null);
+  const [status, setStatus] = useState("loading"); // "loading" | "ok" | "not-found" | "error"
+
+  useEffect(() => {
+    if (!requestedId) {
+      setStatus("not-found");
+      return;
+    }
+    let cancelled = false;
+    setStatus("loading");
+    (async () => {
+      try {
+        const raw = await productsService.getProductById(requestedId);
+        if (cancelled) return;
+        const row = Array.isArray(raw) ? raw[0] : raw;
+        const hydrated = hydrateProduct(row);
+        if (hydrated) {
+          setProduct(hydrated);
+          setStatus("ok");
+        } else {
+          setStatus("not-found");
+        }
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Error cargando producto:", err);
+        setStatus("error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [requestedId]);
+
+  //IMPORTANTE: todos los hooks deben llamarse antes de cualquier early return,
+  //si no React rompe con "rendered fewer hooks than expected".
   const total = useMemo(() => {
+    if (!product) return formatPrice(0);
     return formatPrice(quantity * product.price);
-  }, [quantity, product.price]);
+  }, [quantity, product]);
+
+  if (status !== "ok" || !product) {
+    const message =
+      status === "loading"
+        ? "Cargando producto..."
+        : status === "not-found"
+          ? "Este producto ya no está disponible."
+          : "No se pudo cargar el producto. Comprueba tu conexión.";
+
+    return (
+      <ScreenContainer>
+        <View style={[styles.container, { padding: 20 }]}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={24} color={colors.text} style={styles.backIcon} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Detalle del producto</Text>
+          </View>
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            {status === "loading" ? (
+              <Ionicons name="hourglass-outline" size={32} color={colors.textSoft} />
+            ) : (
+              <Ionicons name="alert-circle-outline" size={32} color={colors.textSoft} />
+            )}
+            <Text style={{ color: colors.textSoft, marginTop: 12, textAlign: "center" }}>
+              {message}
+            </Text>
+          </View>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  const productIsFavorite = isFavorite(product.id);
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
@@ -63,12 +135,20 @@ export default function ProductDetailScreen({ navigation, route }) {
           </View>
 
           <View style={styles.imageCard}>
-            <Image source={product.image} style={styles.productImage} />
+            {product.image ? (
+              <Image source={product.image} style={styles.productImage} />
+            ) : (
+              <View style={[styles.productImage, { justifyContent: "center", alignItems: "center", backgroundColor: "#EEF5E3" }]}>
+                <Ionicons name="leaf" size={48} color={colors.primary} />
+              </View>
+            )}
 
-            <View style={styles.floatingTag}>
-              <Ionicons name="leaf" size={13} color={colors.primary} />
-              <Text style={styles.floatingTagText}>{product.badge}</Text>
-            </View>
+            {product.badge ? (
+              <View style={styles.floatingTag}>
+                <Ionicons name="leaf" size={13} color={colors.primary} />
+                <Text style={styles.floatingTagText}>{product.badge}</Text>
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.infoCard}>
@@ -109,25 +189,31 @@ export default function ProductDetailScreen({ navigation, route }) {
             <Text style={styles.sectionTitle}>Descripcion</Text>
             <Text style={styles.description}>{product.description}</Text>
 
-            <View style={styles.extraInfoRow}>
-              <View style={styles.infoPill}>
-                <Ionicons
-                  name="location-outline"
-                  size={14}
-                  color={colors.primary}
-                />
-                <Text style={styles.infoPillText}>{product.location}</Text>
-              </View>
+            {(product.location || product.deliveryTime) ? (
+              <View style={styles.extraInfoRow}>
+                {product.location ? (
+                  <View style={styles.infoPill}>
+                    <Ionicons
+                      name="location-outline"
+                      size={14}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.infoPillText}>{product.location}</Text>
+                  </View>
+                ) : null}
 
-              <View style={styles.infoPill}>
-                <Ionicons
-                  name="time-outline"
-                  size={14}
-                  color={colors.primary}
-                />
-                <Text style={styles.infoPillText}>{product.deliveryTime}</Text>
+                {product.deliveryTime ? (
+                  <View style={styles.infoPill}>
+                    <Ionicons
+                      name="time-outline"
+                      size={14}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.infoPillText}>{product.deliveryTime}</Text>
+                  </View>
+                ) : null}
               </View>
-            </View>
+            ) : null}
 
             <Text style={styles.sectionTitle}>Cantidad</Text>
 

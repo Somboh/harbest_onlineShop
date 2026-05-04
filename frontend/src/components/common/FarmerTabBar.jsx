@@ -1,8 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { useResponsive } from "../../hooks/useResponsive";
 import { ROLE_THEMES } from "../../styles/roleThemes";
 
 export default function FarmerTabBar({ Navigation, ActiveRoute }) {
+  const { isDesktop } = useResponsive();
+  //En desktop la navegación se hace por la sidebar (ScreenContainer).
+  if (isDesktop) return null;
+
   const FarmerColor = ROLE_THEMES.farmer.primary;
   const InactiveColor = "#8A8A8A";
 

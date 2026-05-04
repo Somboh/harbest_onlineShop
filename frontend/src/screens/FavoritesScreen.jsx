@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Image,
   ScrollView,
@@ -8,17 +8,32 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 
 import ClientTabBar from "../components/common/ClientTabBar";
 import ScreenContainer from "../components/common/ScreenContainer";
+import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { useResponsive } from "../hooks/useResponsive";
 import colors from "../styles/colors";
 import { formatUnitPrice } from "../utils/formatPrice";
 
 export default function FavoritesScreen({ navigation }) {
-  const { favorites, removeFavorite } = useFavorites();
+  const { favorites, removeFavorite, reloadFavorites } = useFavorites();
   const { addToCart } = useCart();
+  const { isAuthenticated } = useAuth();
+  const { isDesktop, isTablet } = useResponsive();
+  const wide = isDesktop || isTablet;
+
+  //Refrescamos cada vez que el usuario entra a esta pantalla. Así si guardó un
+  //favorito desde Home/Categorías el listado aparece al instante con la última
+  //versión de la BD (incluyendo foto_url y datos completos del producto).
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isAuthenticated) reloadFavorites();
+    }, [isAuthenticated, reloadFavorites]),
+  );
 
   return (
     <ScreenContainer>
@@ -77,18 +92,21 @@ export default function FavoritesScreen({ navigation }) {
           </View>
 
           {favorites.length > 0 ? (
-            favorites.map((item) => (
-              <FavoriteCard
-                key={item.id}
-                item={item}
-                navigation={navigation}
-                onRemove={() => removeFavorite(item.id)}
-                onAddToCart={() => {
-                  addToCart(item, 1);
-                  navigation.navigate("Cart");
-                }}
-              />
-            ))
+            <View style={wide ? styles.gridWide : null}>
+              {favorites.map((item) => (
+                <FavoriteCard
+                  key={item.id}
+                  item={item}
+                  navigation={navigation}
+                  wide={wide}
+                  onRemove={() => removeFavorite(item.id)}
+                  onAddToCart={() => {
+                    addToCart(item, 1);
+                    navigation.navigate("Cart");
+                  }}
+                />
+              ))}
+            </View>
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="heart-outline" size={32} color={colors.primary} />
@@ -113,9 +131,9 @@ export default function FavoritesScreen({ navigation }) {
   );
 }
 
-const FavoriteCard = ({ item, navigation, onRemove, onAddToCart }) => (
+const FavoriteCard = ({ item, navigation, onRemove, onAddToCart, wide }) => (
   <TouchableOpacity
-    style={styles.card}
+    style={[styles.card, wide && styles.cardWide]}
     activeOpacity={0.88}
     onPress={() => navigation.navigate("ProductDetail", { productId: item.id })}
   >
@@ -285,6 +303,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 10,
     elevation: 4,
+  },
+  gridWide: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 14,
+    paddingHorizontal: 20,
+  },
+  cardWide: {
+    marginHorizontal: 0,
+    marginBottom: 0,
+    flexBasis: 320,
+    flexGrow: 1,
+    minWidth: 280,
   },
   cardImage: {
     width: 105,

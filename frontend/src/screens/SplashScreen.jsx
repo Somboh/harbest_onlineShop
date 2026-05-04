@@ -1,17 +1,46 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
+  ActivityIndicator,
   Image,
   ImageBackground,
   StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../styles/colors';
+import { useAuth } from '../context/AuthContext';
 
 export default function SplashScreen({ navigation }) {
+  const { isLoading, isAuthenticated, role } = useAuth();
+
+  //Cuando AuthContext termina de hidratarse desde AsyncStorage, si hay sesión
+  //válida saltamos directamente al home correcto y borramos Splash de la pila
+  //para que el botón atrás del navegador no nos devuelva al login.
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) return;
+    const target = role === 'farmer' ? 'HomeAgricultor' : 'Home';
+    navigation.reset({ index: 0, routes: [{ name: target }] });
+  }, [isLoading, isAuthenticated, role, navigation]);
+
+  if (isLoading || isAuthenticated) {
+    return (
+      <ImageBackground
+        source={require('../../assets/images/fondo.png')}
+        style={styles.background}
+        resizeMode="cover"
+      >
+        <StatusBar barStyle="dark-content" />
+        <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator color={colors.primaryLight} size="large" />
+        </SafeAreaView>
+      </ImageBackground>
+    );
+  }
+
   return (
     <ImageBackground
       source={require('../../assets/images/fondo.png')}

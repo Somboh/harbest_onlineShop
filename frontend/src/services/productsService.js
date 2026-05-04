@@ -1,77 +1,63 @@
-import products, { getProductById, getProductsByCategory } from "../data/mockProducts";
 import { api } from "./api";
 
-let url = "https://harbest-onlineshop.onrender.com";
 export const productsService = {
   async getProducts() {
-    await fetch(`${url}/product/`,{method:"GET",}).then((products)=>{
-      let data = products.json();
-      console.log(data);
-      return data;
-    });
+    return api.get("/product/");
   },
-
-  async getProductsByFarmer(farmerId) {
-    await fetch(`${url}/product/farmer/${farmerId}`,{method:"GET",}).then((products)=>{
-      let data = products.json();
-      console.log(data);
-      return data;
-    });
-  },
-
-  // getProductsByCategory(category) {
-    
-  // },
 
   async getProductById(id) {
-    await fetch(`${url}/product/${id}`,{method:"GET",}).then((product)=>{
-      let data = product.json();
-      console.log(data);
-      return data;
-    });
+    return api.get(`/product/${id}`);
   },
 
-  async createProduct(productData) {
-    await fetch(`${url}/product/`,{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "Authorization":`Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify(productData),
-    }).then((response)=>{
-      let data = response.json();
-      console.log(data);
-      return data;
-    });
+  async getProductsByFarmer(farmerEmail) {
+    return api.get(`/product/farmer/${encodeURIComponent(farmerEmail)}`);
   },
 
-  async updateProduct(id, productData) {
-    await fetch(`${url}/product/${id}`,{
-      method:"PUT",
-      headers:{
-        "Content-Type":"application/json",
-        "Authorization":`Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify(productData),
-    }).then((res)=>{
-      let data = res.json();
-      console.log(data);
-      return data;
+  async getProductsByCategory(categoria) {
+    return api.get(`/product/category/${encodeURIComponent(categoria)}`);
+  },
+
+  async searchProducts(q) {
+    return api.get(`/product/search?q=${encodeURIComponent(q)}`);
+  },
+
+  //Crear/actualizar usan FormData porque el backend espera multipart con campo "foto"
+  async createProduct(productData, fotoUri) {
+    const formData = new FormData();
+    Object.entries(productData).forEach(([key, value]) => {
+      formData.append(key, String(value));
     });
+    if (fotoUri) {
+      const filename = fotoUri.split("/").pop() ?? "foto.jpg";
+      const ext = (filename.split(".").pop() ?? "jpg").toLowerCase();
+      formData.append("foto", {
+        uri: fotoUri,
+        name: filename,
+        type: `image/${ext === "jpg" ? "jpeg" : ext}`,
+      });
+    }
+    return api.postForm("/product/", formData, { auth: true });
+  },
+
+  async updateProduct(id, productData, fotoUri) {
+    const formData = new FormData();
+    Object.entries(productData).forEach(([key, value]) => {
+      formData.append(key, String(value));
+    });
+    if (fotoUri) {
+      const filename = fotoUri.split("/").pop() ?? "foto.jpg";
+      const ext = (filename.split(".").pop() ?? "jpg").toLowerCase();
+      formData.append("foto", {
+        uri: fotoUri,
+        name: filename,
+        type: `image/${ext === "jpg" ? "jpeg" : ext}`,
+      });
+    }
+    return api.putForm(`/product/${id}`, formData, { auth: true });
   },
 
   async deleteProduct(id) {
-    await fetch(`${url}/product/${id}`,{
-      method:"DELETE",
-      headers:{
-        "Authorization":`Bearer ${localStorage.getItem("token")}`,
-      },
-    }).then((res)=>{
-      let data = res.json();
-      console.log(data);
-      return data;
-    });
+    return api.delete(`/product/${id}`, { auth: true });
   },
 };
 

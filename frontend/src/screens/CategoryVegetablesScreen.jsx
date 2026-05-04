@@ -1,18 +1,48 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
+  ActivityIndicator,
   Image,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import colors from '../styles/colors';
 import ScreenContainer from '../components/common/ScreenContainer';
+import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
+import { hydrateProducts } from '../data/productAdapter';
+import productsService from '../services/productsService';
+import { formatUnitPrice } from '../utils/formatPrice';
+
+const CATEGORY = 'Verduras';
 
 export default function CategoryVegetablesScreen({ navigation }) {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await productsService.getProductsByCategory(CATEGORY);
+        if (cancelled) return;
+        setProducts(hydrateProducts(raw));
+      } catch (err) {
+        console.error('Error cargando productos de Verduras:', err);
+        if (!cancelled) setProducts([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <ScreenContainer>
       <View style={styles.container}>
@@ -20,7 +50,7 @@ export default function CategoryVegetablesScreen({ navigation }) {
           
           {/* HEADER */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
+            <TouchableOpacity onPress={() => navigation.navigate('Home')}>
               <Ionicons
                 name="arrow-back"
                 size={24}
@@ -100,62 +130,19 @@ export default function CategoryVegetablesScreen({ navigation }) {
           </View>
 
           {/* LISTADO EN 2 COLUMNAS */}
-          <View style={styles.productsGrid}>
-
-          <FruitProductCard
-            navigation={navigation}
-            name="Espárragos"
-            seller="Huerta Viva"
-            price="2,80€/kg"
-            badge="Temporada"
-            image={require('../../assets/images/comida/esparragos.png')}
-          />
-
-          <FruitProductCard
-            navigation={navigation}
-            name="Lechuga"
-            seller="EcoFruit"
-            price="1,50€/kg"
-            badge="Natural"
-            image={require('../../assets/images/comida/lechuga.webp')}
-          />
-
-          <FruitProductCard
-            navigation={navigation}
-            name="Zanahorias"
-            seller="Sol del Sur"
-            price="1,90€/kg"
-            badge="Dulce"
-            image={require('../../assets/images/comida/zanahorias.jpg')}
-          />
-
-          <FruitProductCard
-            navigation={navigation}
-            name="Pimiento"
-            seller="Huerta Viva"
-            price="2,40€/kg"
-            badge="Fresco"
-            image={require('../../assets/images/comida/pimiento.jpg')}
-          />
-
-          <FruitProductCard
-            navigation={navigation}
-            name="Brócoli"
-            seller="EcoGreen"
-            price="2,20€/kg"
-            badge="Saludable"
-            image={require('../../assets/images/comida/brocoli.webp')}
-          />
-
-          <FruitProductCard
-            navigation={navigation}
-            name="Alcachofas"
-            seller="Campo Natural"
-            price="3,00€/kg"
-            badge="Premium"
-            image={require('../../assets/images/comida/alcachofas.jpg')}
-          />
-          </View>
+          {loading && products.length === 0 ? (
+            <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
+          ) : (
+            <View style={styles.productsGrid}>
+              {products.map((product) => (
+                <FruitProductCard
+                  key={product.id}
+                  navigation={navigation}
+                  product={product}
+                />
+              ))}
+            </View>
+          )}
         </ScrollView>
         {/* BOTÓN FLOTANTE AJUSTES */}
         <TouchableOpacity style={styles.floatingButton}>
@@ -185,42 +172,73 @@ const FilterChip = ({ text, icon, active }) => (
   </TouchableOpacity>
 );
 
-const FruitProductCard = ({ navigation, name, seller, price, badge, image }) => (
-  <TouchableOpacity
-    style={styles.productCard}
-    activeOpacity={0.9}
-    onPress={() => navigation.navigate('ProductDetail')}
-  >
-    <View style={styles.imageWrapper}>
-      <Image source={image} style={styles.productImage} />
+const FruitProductCard = ({ navigation, product }) => {
+  const { addToCart } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const isFav = isFavorite(product.id);
 
-      <View style={styles.productOverlayBadge}>
-        <Text style={styles.productOverlayBadgeText}>{badge}</Text>
-      </View>
-    </View>
+  return (
+    <TouchableOpacity
+      style={styles.productCard}
+      activeOpacity={0.9}
+      onPress={() => navigation.navigate('ProductDetail', { productId: product.id })}
+    >
+      <View style={styles.imageWrapper}>
+        {product.image ? (
+          <Image source={product.image} style={styles.productImage} />
+        ) : (
+          <View style={[styles.productImage, styles.productImagePlaceholder]}>
+            <Ionicons name="leaf" size={28} color={colors.primary} />
+          </View>
+        )}
 
-    <View style={styles.productContent}>
-      <Text style={styles.productName} numberOfLines={1}>
-        {name}
-      </Text>
-      <Text style={styles.productSeller} numberOfLines={1}>
-        {seller}
-      </Text>
-
-      <View style={styles.productFooter}>
-        <Text style={styles.productPrice}>{price}</Text>
+        {product.badge ? (
+          <View style={styles.productOverlayBadge}>
+            <Text style={styles.productOverlayBadgeText}>{product.badge}</Text>
+          </View>
+        ) : null}
 
         <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('ProductDetail')}
+          style={styles.favoriteOverlay}
+          onPress={() => toggleFavorite(product)}
           activeOpacity={0.85}
         >
-          <Ionicons name="add" size={16} color="#fff" />
+          <Ionicons
+            name={isFav ? 'heart' : 'heart-outline'}
+            size={16}
+            color={colors.primary}
+          />
         </TouchableOpacity>
       </View>
-    </View>
-  </TouchableOpacity>
-);
+
+      <View style={styles.productContent}>
+        <Text style={styles.productName} numberOfLines={1}>
+          {product.name}
+        </Text>
+        <Text style={styles.productSeller} numberOfLines={1}>
+          {product.seller}
+        </Text>
+
+        <View style={styles.productFooter}>
+          <Text style={styles.productPrice}>
+            {formatUnitPrice(product.price, product.unit)}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => {
+              addToCart(product, 1);
+              navigation.navigate('Cart');
+            }}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -441,6 +459,24 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 11,
     fontWeight: '700',
+  },
+
+  productImagePlaceholder: {
+    backgroundColor: '#EEF5E3',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  favoriteOverlay: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   productContent: {

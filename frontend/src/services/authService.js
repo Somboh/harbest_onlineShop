@@ -1,50 +1,30 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { jwtDecode } from "jwt-decode";
-// const mockUsers = {
-//   client: {
-//     id: "client-1",
-//     name: "Pepe",
-//     email: "cliente@harbest.com",
-//     role: "client",
-//   },
-//   farmer: {
-//     id: "farmer-1",
-//     name: "Jaume",
-//     email: "agricultor@harbest.com",
-//     role: "farmer",
-//   },
-// };
-const url = "https://harbest-onlineshop.onrender.com";
+import { API_BASE_URL } from "./api";
+
+const url = API_BASE_URL;
 
 export const authService = {
   async userLogin(data) {
     try {
       const res = await fetch(`${url}/auth/user/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       const resultado = await res.json();
 
       if (resultado.accessToken) {
-        await AsyncStorage.setItem("token", resultado.accessToken); //token para compruebar si el usuario está logueado
-        await AsyncStorage.setItem("role", "user"); //token para comprobar el rol del usuario
+        await AsyncStorage.setItem("token", resultado.accessToken);
+        await AsyncStorage.setItem("role", "user");
         return { status: "OK" };
-      } else {
-        if (resultado && resultado.status === "ERROR") {
-          alert(resultado.message);
-          return null;
-        } else {
-          console.error("Error en token de login:", resultado);
-          return null;
-        }
-        return null;
       }
+      //Devolvemos el cuerpo tal cual para que la pantalla pueda mostrar el
+      //mensaje real del servidor (status + message). NO usar alert() aquí.
+      return resultado ?? { status: "ERROR", message: "Error desconocido" };
     } catch (error) {
       console.error("Error en el login:", error);
-      return null;
+      return { status: "ERROR", message: "No se pudo conectar con el servidor" };
     }
   },
 
@@ -52,48 +32,41 @@ export const authService = {
     try {
       const res = await fetch(`${url}/auth/farmer/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       const resultado = await res.json();
 
       if (resultado.accessToken) {
-        await AsyncStorage.setItem("token", resultado.accessToken); //token para compruebar si el usuario está logueado
-        await AsyncStorage.setItem("role", "farmer"); //token para comprobar el rol del usuario
+        await AsyncStorage.setItem("token", resultado.accessToken);
+        await AsyncStorage.setItem("role", "farmer");
         return { status: "OK" };
-      } else {
-        if (resultado && resultado.status === "ERROR") {
-          alert(resultado.message);
-          return null;
-        } else {
-          console.error("Error en token de login:", resultado);
-          return null;
-        }
-        return null;
       }
+      return resultado ?? { status: "ERROR", message: "Error desconocido" };
     } catch (error) {
       console.error("Error en el login:", error);
-      return null;
+      return { status: "ERROR", message: "No se pudo conectar con el servidor" };
     }
   },
 
+  //El backend espera multipart/form-data (multer + foto). `data` debe ser
+  //FormData con los campos: nombre, email, contra, foto. NO se fija el header
+  //Content-Type a mano: fetch lo añade con el boundary correcto al detectar
+  //FormData. Si llega un objeto plano, se acepta como fallback JSON.
   async userRegister(data) {
     try {
+      const isFormData =
+        typeof FormData !== "undefined" && data instanceof FormData;
       const response = await fetch(`${url}/auth/user/register`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+        headers: isFormData ? {} : { "Content-Type": "application/json" },
+        body: isFormData ? data : JSON.stringify(data),
       });
       const result = await response.json();
-      console.log(result);
       return result;
     } catch (error) {
       console.error("Error en el registro:", error);
-      return null;
+      return { status: "ERROR", message: "No se pudo conectar con el servidor" };
     }
   },
 
@@ -112,6 +85,26 @@ export const authService = {
       return token;
     } catch (error) {
       console.error("Error al obtener el token:", error);
+      return null;
+    }
+  },
+
+  //Devuelve el payload del JWT actual o null si no hay token / está caducado.
+  //Lo usan las pantallas que necesitan saber quién es el usuario logueado
+  //(checkout, mis pedidos, popup del agricultor, etc.).
+  async getCurrentUser() {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return null;
+      const decoded = jwtDecode(token);
+      if (decoded.exp && decoded.exp < Date.now() / 1000) return null;
+      return {
+        id: decoded.id ?? null,
+        email: decoded.email ?? null,
+        role: decoded.role ?? null,
+      };
+    } catch (error) {
+      console.error("Error al decodificar el token:", error);
       return null;
     }
   },

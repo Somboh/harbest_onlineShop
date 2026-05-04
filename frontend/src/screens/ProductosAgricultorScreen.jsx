@@ -14,6 +14,7 @@ import ScreenContainer from "../components/common/ScreenContainer";
 import { mockProducts } from "../data/mockProducts";
 import { useAuth } from "../context/AuthContext";
 import { useDisplaySettings } from "../context/DisplaySettingsContext";
+import { useResponsive } from "../hooks/useResponsive";
 import { getDisplayMode } from "../styles/displayModes";
 import { ROLE_THEMES } from "../styles/roleThemes";
 
@@ -21,6 +22,8 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const display = getDisplayMode(settings, ROLE_THEMES.farmer);
+  const { isDesktop, isTablet } = useResponsive();
+  const wide = isDesktop || isTablet;
 
   const category = route.params?.category || "Todos";
   const isAllCategories = category === "Todos";
@@ -207,6 +210,7 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
                   product={product}
                   display={display}
                   onPress={() => navigation.navigate("Inventory")}
+                  wide={wide}
                 />
               ))}
             </View>
@@ -248,10 +252,11 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
   );
 }
 
-const ProductCard = ({ product, display, onPress }) => (
+const ProductCard = ({ product, display, onPress, wide }) => (
   <TouchableOpacity
     style={[
       styles.productCard,
+      wide && styles.productCardWide,
       {
         backgroundColor: display.surface,
         borderColor: display.border,
@@ -424,6 +429,10 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 12,
     marginBottom: 20,
+  },
+
+  productCardWide: {
+    width: "23.5%",
   },
 
   productCard: {

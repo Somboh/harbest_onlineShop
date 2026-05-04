@@ -10,6 +10,7 @@ import {
 
 import FarmerTabBar from "../components/common/FarmerTabBar";
 import ScreenContainer from "../components/common/ScreenContainer";
+import PendingOrdersBanner from "../components/orders/PendingOrdersBanner";
 import { useDisplaySettings } from "../context/DisplaySettingsContext";
 import { mockProducts } from "../data/mockProducts";
 import { getDisplayMode } from "../styles/displayModes";
@@ -188,6 +189,7 @@ export default function HomeAgricultorScreen({ navigation }) {
           </View>
         </ScrollView>
 
+        <PendingOrdersBanner navigation={navigation} bottom={100} />
         <FarmerTabBar Navigation={navigation} ActiveRoute="HomeAgricultor" />
       </View>
     </ScreenContainer>

@@ -1,9 +1,14 @@
 import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useResponsive } from "../../hooks/useResponsive";
 import { ROLE_THEMES } from "../../styles/roleThemes";
 
 export default function ClientTabBar({ Navigation, ActiveRoute }) {
+  const { isDesktop } = useResponsive();
+  //En desktop la navegación se hace por la sidebar (ScreenContainer).
+  if (isDesktop) return null;
+
   const ClientColor = ROLE_THEMES.user.primaryTint;
   const InactiveColor = "#8A8A8A";
 

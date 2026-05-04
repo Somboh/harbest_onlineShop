@@ -12,9 +12,12 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import ScreenContainer from "../components/common/ScreenContainer";
 import FarmerTabBar from "../components/common/FarmerTabBar";
 import { mockProducts } from "../data/mockProducts";
+import { useResponsive } from "../hooks/useResponsive";
 import { ROLE_THEMES } from "../styles/roleThemes";
 
 export default function InventoryScreen({ navigation }) {
+  const { isDesktop, isTablet } = useResponsive();
+  const wide = isDesktop || isTablet;
   // <-- RENOMBRADO PARA QUE COINCIDA CON EL STACK
   const inventory = [
     {
@@ -170,8 +173,9 @@ export default function InventoryScreen({ navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tus productos</Text>
 
+            <View style={wide ? styles.inventoryGridWide : null}>
             {inventory.map((item) => (
-              <View key={item.id} style={styles.productCard}>
+              <View key={item.id} style={[styles.productCard, wide && styles.productCardWide]}>
                 <View style={styles.productTopRow}>
                   <Image source={item.image} style={styles.productImage} />
 
@@ -223,6 +227,7 @@ export default function InventoryScreen({ navigation }) {
                 </View>
               </View>
             ))}
+            </View>
           </View>
         </ScrollView>
 
@@ -438,6 +443,19 @@ const styles = StyleSheet.create({
     borderColor: theme.border,
     padding: 16,
     marginBottom: 14,
+  },
+
+  inventoryGridWide: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 14,
+  },
+
+  productCardWide: {
+    flexBasis: 360,
+    flexGrow: 1,
+    minWidth: 320,
+    marginBottom: 0,
   },
 
   productTopRow: {

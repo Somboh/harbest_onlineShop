@@ -276,7 +276,7 @@ const SearchCard = ({ item, navigation }) => (
   <TouchableOpacity
     style={styles.resultCard}
     activeOpacity={0.9}
-    onPress={() => navigation.navigate('ProductDetail')}
+    onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
   >
     <Image source={item.image} style={styles.resultImage} />
 

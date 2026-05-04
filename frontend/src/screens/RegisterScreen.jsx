@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute } from "@react-navigation/native";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -13,22 +13,29 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../context/AuthContext";
 import { useResponsive } from "../hooks/useResponsive";
+import authService from "../services/authService";
 import colors from "../styles/colors";
 
-export default function LoginScreen({ navigation }) {
+const defaultAvatar = require("../../assets/images/icon.png");
+
+export default function RegisterScreen({ navigation }) {
   const route = useRoute();
   const { role } = route.params || {};
   const isFarmer = role === "farmer";
   const { isDesktop } = useResponsive();
   const isSplit = isDesktop;
-  const { loginUser, loginFarmer } = useAuth();
 
+  const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [photo, setPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const fileInputRef = useRef(null);
 
   const themeColors = {
     primary: isFarmer ? colors.secondary : colors.primary,
@@ -41,68 +48,123 @@ export default function LoginScreen({ navigation }) {
     ? require("../../assets/images/agricultor-logo.png")
     : require("../../assets/images/logo-harbest.png");
 
-  const handleLogin = async () => {
+  const handlePickPhoto = () => {
+    if (Platform.OS === "web") {
+      if (!fileInputRef.current) {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.onchange = (event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            setPhoto(file);
+            setPhotoPreview(URL.createObjectURL(file));
+          }
+        };
+        fileInputRef.current = input;
+      }
+      fileInputRef.current.click();
+    } else {
+      //En nativo aún no tenemos selector de imagen instalado (expo-image-picker).
+      //Se enviará el avatar por defecto y el usuario podrá cambiarla luego en
+      //"Mis datos". Mostramos el aviso para que sepa que el envío es válido.
+      setErrorMessage(
+        "El selector de foto solo está disponible en web. Se usará un avatar por defecto.",
+      );
+    }
+  };
+
+  const buildFotoForUpload = async () => {
+    if (photo) return photo;
+
+    //Asset por defecto: lo bundleamos con la app y lo convertimos en File para
+    //que el backend (multer) reciba un fichero válido aunque el usuario no
+    //haya elegido foto.
+    const asset = Image.resolveAssetSource(defaultAvatar);
+    const response = await fetch(asset.uri);
+    const blob = await response.blob();
+    if (Platform.OS === "web") {
+      return new File([blob], "default-avatar.png", {
+        type: blob.type || "image/png",
+      });
+    }
+    return { uri: asset.uri, name: "default-avatar.png", type: "image/png" };
+  };
+
+  const handleRegister = async () => {
     setErrorMessage("");
 
-    if (!email.trim() || !password) {
-      setErrorMessage("Introduce tu email y contraseña.");
+    if (!nombre.trim() || !email.trim() || !password || !confirm) {
+      setErrorMessage("Completa todos los campos para continuar.");
+      return;
+    }
+
+    const emailNormalized = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailNormalized)) {
+      setErrorMessage("Introduce un email con un formato válido.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    if (password !== confirm) {
+      setErrorMessage("Las contraseñas no coinciden.");
       return;
     }
 
     setSubmitting(true);
     try {
-      const data = { email: email.trim().toLowerCase(), contra: password };
-      //loginUser/loginFarmer guardan el JWT en AsyncStorage Y refrescan el
-      //contexto, así el resto de la app ya ve la sesión sin recargar.
-      const res = isFarmer ? await loginFarmer(data) : await loginUser(data);
+      const foto = await buildFotoForUpload();
+      const formData = new FormData();
+      formData.append("nombre", nombre.trim());
+      formData.append("email", emailNormalized);
+      formData.append("contra", password);
+      formData.append("foto", foto);
+
+      const res = await authService.userRegister(formData);
 
       if (res && res.status === "OK") {
-        //reset para que el back del navegador no devuelva al login.
-        navigation.reset({
-          index: 0,
-          routes: [{ name: isFarmer ? "HomeAgricultor" : "Home" }],
-        });
+        navigation.navigate("Login", { role: "user" });
       } else {
         setErrorMessage(
-          res?.message ?? "Email o contraseña incorrectos. Inténtalo de nuevo.",
+          res?.message ?? "No se pudo completar el registro. Inténtalo de nuevo.",
         );
       }
     } catch (error) {
-      console.error("Error ejecutando el login:", error);
-      setErrorMessage("No se pudo conectar con el servidor. Reintenta en unos segundos.");
+      console.error("Error ejecutando el registro:", error);
+      setErrorMessage(
+        "No se pudo conectar con el servidor. Reintenta en unos segundos.",
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
-  //Atrás siempre vuelve a la elección de rol. Usamos reset para no depender
-  //del historial del navegador ni del estado de la pila —si llegaste al Login
-  //por URL directa, recarga, deep link o desde "Cerrar sesión", siempre
-  //acabas en Splash con la pila limpia.
-  const goToSplash = () => {
-    navigation.reset({ index: 0, routes: [{ name: "Splash" }] });
-  };
-
   const Header = (
     <View style={[styles.topSection, isSplit && styles.topSectionDesktop]}>
       <View style={styles.topRow}>
-        <TouchableOpacity onPress={goToSplash}>
+        <TouchableOpacity onPress={() => navigation.navigate("Login", { role })}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={goToSplash}>
+        <TouchableOpacity onPress={() => navigation.navigate("Splash")}>
           <Image source={logoSource} style={styles.logoImage} />
         </TouchableOpacity>
       </View>
 
       <View style={styles.headerTextBlock}>
         <Text style={styles.headerMiniText}>
-          {isFarmer ? "Acceso agricultor" : "Acceso usuario"}
+          {isFarmer ? "Alta agricultor" : "Alta usuario"}
         </Text>
         <Text style={[styles.headerTitle, isSplit && styles.headerTitleDesktop]}>
-          Iniciar sesión
+          Crea tu cuenta
         </Text>
         <Text style={styles.headerSubtitle}>
-          Accede a Harbest y continúa comprando producto fresco y de proximidad.
+          Únete a Harbest y empieza a comprar producto fresco directamente del
+          agricultor.
         </Text>
       </View>
 
@@ -113,11 +175,55 @@ export default function LoginScreen({ navigation }) {
 
   const Card = (
     <View style={[styles.card, isSplit && styles.cardDesktop]}>
+      <View style={styles.avatarRow}>
+        <TouchableOpacity
+          style={[styles.avatarCircle, { borderColor: themeColors.primary }]}
+          onPress={handlePickPhoto}
+          activeOpacity={0.85}
+        >
+          {photoPreview ? (
+            <Image source={{ uri: photoPreview }} style={styles.avatarImage} />
+          ) : (
+            <Ionicons
+              name="person-outline"
+              size={32}
+              color={themeColors.primary}
+            />
+          )}
+          <View
+            style={[
+              styles.avatarBadge,
+              { backgroundColor: themeColors.primary },
+            ]}
+          >
+            <Ionicons name="camera" size={12} color="#fff" />
+          </View>
+        </TouchableOpacity>
+        <View style={styles.avatarTextBlock}>
+          <Text style={styles.avatarTitle}>Foto de perfil</Text>
+          <Text style={styles.avatarSubtitle}>
+            Opcional. Puedes añadirla ahora o más tarde desde tu perfil.
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Nombre</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="¿Cómo te llamas?"
+          placeholderTextColor={colors.textSoft}
+          value={nombre}
+          onChangeText={setNombre}
+          autoCapitalize="words"
+        />
+      </View>
+
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Correo electrónico</Text>
         <TextInput
           style={styles.input}
-          placeholder="Introduce tu email"
+          placeholder="tu@email.com"
           placeholderTextColor={colors.textSoft}
           keyboardType="email-address"
           autoCapitalize="none"
@@ -128,28 +234,27 @@ export default function LoginScreen({ navigation }) {
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Contraseña</Text>
-        <View style={styles.passwordWrapper}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Introduce tu contraseña"
-            placeholderTextColor={colors.textSoft}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TouchableOpacity>
-            <Text style={[styles.showText, { color: themeColors.primary }]}>
-              Mostrar
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <TextInput
+          style={styles.input}
+          placeholder="Mínimo 6 caracteres"
+          placeholderTextColor={colors.textSoft}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
       </View>
 
-      <TouchableOpacity style={styles.forgotWrapper}>
-        <Text style={[styles.forgotText, { color: themeColors.primary }]}>
-          ¿Has olvidado tu contraseña?
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Confirmar contraseña</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Repite tu contraseña"
+          placeholderTextColor={colors.textSoft}
+          value={confirm}
+          onChangeText={setConfirm}
+          secureTextEntry
+        />
+      </View>
 
       {errorMessage ? (
         <View style={styles.errorBanner}>
@@ -164,40 +269,27 @@ export default function LoginScreen({ navigation }) {
           { backgroundColor: themeColors.primary },
           submitting && styles.mainButtonDisabled,
         ]}
-        onPress={handleLogin}
+        onPress={handleRegister}
         disabled={submitting}
         activeOpacity={0.85}
       >
         <Text style={styles.mainButtonText}>
-          {submitting ? "Iniciando sesión..." : "Iniciar sesión"}
+          {submitting ? "Creando cuenta..." : "Crear cuenta"}
         </Text>
       </TouchableOpacity>
 
-      <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>o continúa con</Text>
-        <View style={styles.dividerLine} />
-      </View>
-      <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
-        <View style={styles.socialIconCircle}>
-          <Text style={styles.socialIconText}>G</Text>
-        </View>
-        <Text style={styles.socialButtonText}>Continuar con Google</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
-        <View style={styles.socialIconCircle}>
-          <Text style={styles.socialIconText}>f</Text>
-        </View>
-        <Text style={styles.socialButtonText}>Continuar con Facebook</Text>
-      </TouchableOpacity>
+      <Text style={styles.legalText}>
+        Al continuar aceptas los términos de uso y la política de privacidad de
+        Harbest.
+      </Text>
 
-      <Text style={styles.registerText}>
-        ¿No tienes cuenta?{" "}
+      <Text style={styles.loginText}>
+        ¿Ya tienes cuenta?{" "}
         <Text
-          style={[styles.registerLink, { color: themeColors.primary }]}
-          onPress={() => navigation.navigate("Register", { role })}
+          style={[styles.loginLink, { color: themeColors.primary }]}
+          onPress={() => navigation.navigate("Login", { role })}
         >
-          Regístrate
+          Inicia sesión
         </Text>
       </Text>
     </View>
@@ -257,7 +349,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  //--- Mobile wrapper (KeyboardAvoidingView + ScrollView) ---
   mobileWrapper: {
     flex: 1,
   },
@@ -266,13 +357,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  //flexGrow:1 garantiza que el card pueda usar flex:1 para ocupar todo el alto
-  //restante cuando el contenido cabe sin scroll.
   mobileScrollContent: {
     flexGrow: 1,
   },
 
-  //--- Desktop split layout ---
   containerDesktop: {
     alignItems: "center",
     justifyContent: "center",
@@ -301,8 +389,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  //flexGrow:1 + alignItems/justifyContent:center → la card queda centrada cuando
-  //hay sitio; cuando la ventana es muy baja, el scroll se activa.
   splitScrollContent: {
     flexGrow: 1,
     alignItems: "center",
@@ -406,13 +492,68 @@ const styles = StyleSheet.create({
   cardDesktop: {
     flex: 0,
     width: "100%",
-    maxWidth: 440,
+    maxWidth: 460,
     borderRadius: 24,
     paddingHorizontal: 32,
     paddingVertical: 32,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.06,
     shadowRadius: 24,
+  },
+
+  avatarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 22,
+  },
+
+  avatarCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#F3F5ED",
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    position: "relative",
+    marginRight: 14,
+  },
+
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+
+  avatarBadge: {
+    position: "absolute",
+    right: 2,
+    bottom: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+
+  avatarTextBlock: {
+    flex: 1,
+  },
+
+  avatarTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.text,
+    marginBottom: 4,
+  },
+
+  avatarSubtitle: {
+    fontSize: 12,
+    color: colors.textSoft,
+    lineHeight: 17,
   },
 
   inputGroup: {
@@ -435,43 +576,12 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 
-  passwordWrapper: {
-    backgroundColor: "#F3F5ED",
-    borderRadius: 999,
-    paddingLeft: 16,
-    paddingRight: 14,
-    paddingVertical: 13,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  passwordInput: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.text,
-  },
-
-  showText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
-  forgotWrapper: {
-    alignSelf: "flex-end",
-    marginTop: 2,
-    marginBottom: 18,
-  },
-
-  forgotText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-
   mainButton: {
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: "center",
-    marginBottom: 22,
+    marginTop: 8,
+    marginBottom: 14,
   },
 
   mainButtonDisabled: {
@@ -503,65 +613,21 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 18,
-  },
-
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E6E6E6",
-  },
-
-  dividerText: {
-    marginHorizontal: 10,
-    fontSize: 12,
+  legalText: {
+    fontSize: 11,
     color: colors.textSoft,
-    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 16,
+    marginBottom: 14,
   },
 
-  socialButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8F8F5",
-    borderRadius: 999,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginBottom: 12,
-  },
-
-  socialIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-
-  socialIconText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: colors.text,
-  },
-
-  socialButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-  },
-
-  registerText: {
+  loginText: {
     textAlign: "center",
     fontSize: 13,
     color: colors.textSoft,
-    marginTop: 10,
   },
 
-  registerLink: {
+  loginLink: {
     fontWeight: "800",
   },
 });

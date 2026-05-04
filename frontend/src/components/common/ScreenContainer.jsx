@@ -1,26 +1,60 @@
+import { useNavigationState } from '@react-navigation/native';
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
-import colors from '../../styles/colors';
-import { useAuth } from '../../context/AuthContext';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useDisplaySettings } from '../../context/DisplaySettingsContext';
+import { useResponsive } from '../../hooks/useResponsive';
+import colors from '../../styles/colors';
+import DesktopSidebar, { SIDEBAR_WIDTH_PX } from './DesktopSidebar';
 import DisplayModeMenu from './DisplayModeMenu';
+
+//Rutas que NO deben mostrar la sidebar (auth/onboarding).
+const UNAUTHED_ROUTES = new Set(['Splash', 'Login', 'Register']);
+
+const FARMER_ROUTES = new Set([
+  'HomeAgricultor',
+  'OrdersAgricultor',
+  'OrdersScreenAgricultor',
+  'AddProduct',
+  'Inventory',
+  'SearchAgricultor',
+  'ProductosAgricultor',
+  'ProfileAgricultor',
+]);
+
+function deriveRoleFromRoute(routeName) {
+  if (!routeName) return null;
+  if (UNAUTHED_ROUTES.has(routeName)) return null;
+  if (FARMER_ROUTES.has(routeName)) return 'farmer';
+  return 'user';
+}
 
 export default function ScreenContainer({ children }) {
   const { settings } = useDisplaySettings();
-  const { role } = useAuth();
+  const { isDesktop } = useResponsive();
+
+  //Ruta activa para decidir el rol y resaltar el item de sidebar.
+  const activeRoute = useNavigationState(
+    (state) => (state ? state.routes[state.index]?.name : null),
+  );
+  const role = deriveRoleFromRoute(activeRoute);
+  const showSidebar = isDesktop && role !== null;
   const menuRole = role === 'farmer' ? 'farmer' : 'user';
 
   return (
     <View
       style={[
         styles.outer,
+        showSidebar && styles.outerDesktop,
         settings.darkMode && styles.outerDark,
         settings.highContrast && styles.outerContrast,
       ]}
     >
+      {showSidebar && <DesktopSidebar role={role} activeRoute={activeRoute} />}
+
       <View
         style={[
           styles.inner,
+          showSidebar ? styles.innerDesktop : styles.innerCompact,
           settings.darkMode && styles.innerDark,
           settings.highContrast && styles.innerContrast,
         ]}
@@ -55,12 +89,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: Platform.OS === 'ios' ? 50 : 40,
   },
+  //Cuando hay sidebar, el outer pasa a layout horizontal sin paddingTop
+  //(la sidebar ocupa toda la altura) y sin centrado horizontal.
+  outerDesktop: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    paddingTop: 0,
+  },
   inner: {
     flex: 1,
     width: '100%',
-    maxWidth: Platform.OS === 'web' ? 390 : '100%',
     backgroundColor: colors.background,
     overflow: 'hidden',
+  },
+  //Layout móvil/tablet: simulamos un teléfono centrado en web.
+  innerCompact: {
+    maxWidth: Platform.OS === 'web' ? 480 : '100%',
+  },
+  //Layout desktop: ocupa el resto del ancho, con un máximo razonable y centrado.
+  innerDesktop: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    marginLeft: SIDEBAR_WIDTH_PX,
+    paddingHorizontal: 24,
   },
   content: {
     flex: 1,
@@ -100,7 +151,7 @@ const styles = StyleSheet.create({
   globalMenu: {
     position: 'absolute',
     top: 10,
-    right: 64,
+    right: 24,
     zIndex: 100,
     elevation: 100,
   },

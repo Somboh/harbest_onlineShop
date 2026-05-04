@@ -11,8 +11,18 @@ import { Ionicons } from "@expo/vector-icons";
 import colors from "../styles/colors";
 import ScreenContainer from "../components/common/ScreenContainer";
 import ClientTabBar from "../components/common/ClientTabBar";
+import { useAuth } from "../context/AuthContext";
 
 export default function ProfileScreenUser({ navigation }) {
+  const { logout } = useAuth();
+
+  //Cerrar sesión limpia el token + estado del contexto y deja la pila en
+  //Splash, así el usuario aterriza en la pantalla de elección de rol.
+  const handleLogout = async () => {
+    await logout();
+    navigation.reset({ index: 0, routes: [{ name: "Splash" }] });
+  };
+
   return (
     <ScreenContainer>
       <View style={styles.container}>
@@ -71,7 +81,11 @@ export default function ProfileScreenUser({ navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Cuenta</Text>
 
-            <ProfileOption icon="person-circle-outline" label="Mis datos" />
+            <ProfileOption
+              icon="person-circle-outline"
+              label="Mis datos"
+              onPress={() => navigation.navigate("MyData")}
+            />
 
             <ProfileOption
               icon="heart-outline"
@@ -86,18 +100,9 @@ export default function ProfileScreenUser({ navigation }) {
             />
           </View>
 
-          {/* SECCIÓN SOPORTE */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Soporte</Text>
-
-            <ProfileOption icon="help-circle-outline" label="Centro de ayuda" />
-
-            <ProfileOption icon="settings-outline" label="Ajustes" />
-          </View>
-
           <TouchableOpacity
             style={styles.logoutButton}
-            onPress={() => navigation.navigate("Login")}
+            onPress={handleLogout}
             activeOpacity={0.85}
           >
             <Ionicons name="log-out-outline" size={18} color={colors.primary} />

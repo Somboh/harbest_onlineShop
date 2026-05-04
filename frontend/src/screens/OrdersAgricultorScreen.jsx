@@ -1,5 +1,8 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
@@ -8,33 +11,73 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import FarmerTabBar from "../components/common/FarmerTabBar";
 import ScreenContainer from "../components/common/ScreenContainer";
+import authService from "../services/authService";
+import ordersService, {
+  STATUS_COLORS,
+  STATUS_LABEL_FARMER,
+} from "../services/ordersService";
+import { useResponsive } from "../hooks/useResponsive";
 import { ROLE_THEMES } from "../styles/roleThemes";
+
+function formatDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd} · ${mm} · ${yyyy}`;
+}
 
 export default function OrdersAgricultorScreen({ navigation }) {
   const FarmerColor = ROLE_THEMES.farmer.primary;
+  const { isDesktop, isTablet } = useResponsive();
+  const wide = isDesktop || isTablet;
 
-  const orders = [
-    {
-      id: "0000000000",
-      user: "Pepe",
-      date: "12 · 02 · 2026",
-      status: "PENDIENTE",
-    },
-    {
-      id: "0000000001",
-      user: "Ana",
-      date: "10 · 02 · 2026",
-      status: "ENTREGADO",
-    },
-    {
-      id: "0000000002",
-      user: "Luis",
-      date: "08 · 02 · 2026",
-      status: "PENDIENTE",
-    },
-  ];
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+
+  const reload = useCallback(async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const user = await authService.getCurrentUser();
+      if (!user?.email) {
+        setError("Sesión caducada. Vuelve a iniciar sesión.");
+        setOrders([]);
+        return;
+      }
+      const data = await ordersService.getOrdersByFarmer(user.email);
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error cargando pedidos del agricultor:", err);
+      setError(err?.message ?? "No se pudieron cargar los pedidos");
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      reload();
+    }, [reload]),
+  );
+
+  const filtered = orders.filter((o) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return (
+      o.id?.toLowerCase().includes(q) ||
+      o.user_email?.toLowerCase().includes(q) ||
+      o.estado?.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <ScreenContainer>
@@ -53,16 +96,9 @@ export default function OrdersAgricultorScreen({ navigation }) {
             </TouchableOpacity>
 
             <View style={Styles.HeaderRight}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("ProfileAgricultor")}
-              >
-                <View
-                  style={[Styles.LogoCircle, { backgroundColor: FarmerColor }]}
-                >
-                  <Image
-                    source={ROLE_THEMES.farmer.logo}
-                    style={Styles.TopLogo}
-                  />
+              <TouchableOpacity onPress={() => navigation.navigate("ProfileAgricultor")}>
+                <View style={[Styles.LogoCircle, { backgroundColor: FarmerColor }]}>
+                  <Image source={ROLE_THEMES.farmer.logo} style={Styles.TopLogo} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -72,14 +108,52 @@ export default function OrdersAgricultorScreen({ navigation }) {
             <Ionicons name="search" size={20} color="#B8B8B8" />
             <TextInput
               style={Styles.SearchInputText}
-              placeholder="Buscar pedidos..."
+              placeholder="Buscar por id, cliente o estado..."
               placeholderTextColor="#B8B8B8"
+              value={search}
+              onChangeText={setSearch}
             />
           </View>
 
-          {orders.map((order, index) => (
-            <OrderCard key={index} order={order} />
-          ))}
+          {loading ? (
+            <View style={Styles.Center}>
+              <ActivityIndicator color={FarmerColor} />
+              <Text style={Styles.CenterText}>Cargando pedidos...</Text>
+            </View>
+          ) : error ? (
+            <View style={[Styles.EmptyCard, { backgroundColor: "#FBE9E5" }]}>
+              <Ionicons name="cloud-offline-outline" size={26} color="#B3533D" />
+              <Text style={Styles.ErrorText}>{error}</Text>
+              <TouchableOpacity style={Styles.RetryBtn} onPress={reload}>
+                <Text style={Styles.RetryBtnText}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : filtered.length === 0 ? (
+            <View style={Styles.EmptyCard}>
+              <Ionicons name="receipt-outline" size={28} color={FarmerColor} />
+              <Text style={Styles.EmptyTitle}>
+                {search.trim() ? "Sin coincidencias" : "Aún no tienes pedidos"}
+              </Text>
+              <Text style={Styles.EmptySubtitle}>
+                {search.trim()
+                  ? "Prueba con otro término de búsqueda."
+                  : "Cuando un cliente te haga un pedido aparecerá aquí."}
+              </Text>
+            </View>
+          ) : (
+            <View style={wide ? Styles.OrdersGridWide : null}>
+              {filtered.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  wide={wide}
+                  onPress={() =>
+                    navigation.navigate("OrderDetailFarmer", { orderId: order.id })
+                  }
+                />
+              ))}
+            </View>
+          )}
         </ScrollView>
 
         <FarmerTabBar Navigation={navigation} ActiveRoute="OrdersAgricultor" />
@@ -88,83 +162,38 @@ export default function OrdersAgricultorScreen({ navigation }) {
   );
 }
 
-const OrderCard = ({ order }) => {
-  const isDelivered = order.status === "ENTREGADO";
+function OrderCard({ order, wide, onPress }) {
+  const palette = STATUS_COLORS[order.estado] ?? { bg: "#EEE", text: "#555" };
+  const label = STATUS_LABEL_FARMER[order.estado] ?? order.estado ?? "—";
 
   return (
     <TouchableOpacity
-      style={[
-        Styles.Card,
-        isDelivered ? Styles.CardDelivered : Styles.CardPending,
-      ]}
+      style={[Styles.Card, wide && Styles.CardWide]}
       activeOpacity={0.9}
+      onPress={onPress}
     >
       <View style={Styles.CardTop}>
         <View style={Styles.BoxIconWrap}>
-          <Ionicons
-            name="cube"
-            size={70}
-            color={
-              isDelivered
-                ? "rgba(125, 181, 106, 0.4)"
-                : "rgba(210, 180, 100, 0.4)"
-            }
-          />
+          <Ionicons name="cube" size={56} color="rgba(125, 125, 125, 0.4)" />
         </View>
         <View style={Styles.OrderInfo}>
-          <Text
-            style={[
-              Styles.OrderStatus,
-              isDelivered
-                ? Styles.StatusTextDelivered
-                : Styles.StatusTextPending,
-            ]}
-          >
-            {order.status}
-          </Text>
+          <View style={[Styles.StatusPill, { backgroundColor: palette.bg }]}>
+            <Text style={[Styles.StatusPillText, { color: palette.text }]}>
+              {label.toUpperCase()}
+            </Text>
+          </View>
           <Text style={Styles.OrderTitle}>Pedido #{order.id}</Text>
-          <Text style={Styles.OrderText}>Para: {order.user}</Text>
-          <Text style={Styles.OrderText}>Fecha: {order.date}</Text>
+          <Text style={Styles.OrderText}>De: {order.user_email}</Text>
+          <Text style={Styles.OrderText}>Fecha: {formatDate(order.fecha)}</Text>
+          <Text style={Styles.OrderTotal}>
+            {Number(order.total ?? 0).toFixed(2)} €
+          </Text>
         </View>
-        <View style={Styles.ArrowWrap}>
-          <Ionicons
-            name="chevron-forward"
-            size={24}
-            color={isDelivered ? "#7DB56A" : "#C77A72"}
-          />
-        </View>
-      </View>
-
-      <View style={Styles.ProgressContainer}>
-        <View style={Styles.ProgressStartCircle}>
-          <View style={Styles.ProgressStartInner} />
-        </View>
-        <View style={Styles.ProgressLineSolid} />
-        {!isDelivered && (
-          <View style={Styles.ProgressTruckWrap}>
-            <MaterialCommunityIcons
-              name="truck-outline"
-              size={32}
-              color="#8A8A8A"
-            />
-          </View>
-        )}
-        {isDelivered ? (
-          <View style={Styles.ProgressLineSolid} />
-        ) : (
-          <View style={Styles.ProgressLineDashed} />
-        )}
-        {isDelivered ? (
-          <View style={Styles.ProgressEndCheck}>
-            <Ionicons name="checkmark" size={24} color="#8A8A8A" />
-          </View>
-        ) : (
-          <View style={Styles.ProgressEndDot} />
-        )}
+        <Ionicons name="chevron-forward" size={22} color="#B5B5B5" />
       </View>
     </TouchableOpacity>
   );
-};
+}
 
 const Styles = StyleSheet.create({
   MainContainer: { flex: 1, backgroundColor: ROLE_THEMES.farmer.background },
@@ -176,12 +205,7 @@ const Styles = StyleSheet.create({
     marginBottom: 25,
   },
   HeaderLeft: { flexDirection: "row", alignItems: "center" },
-  HeaderText: {
-    fontSize: 20,
-    color: "#8A8A8A",
-    marginLeft: 15,
-    fontWeight: "500",
-  },
+  HeaderText: { fontSize: 20, color: "#8A8A8A", marginLeft: 15, fontWeight: "500" },
   HeaderRight: { flexDirection: "row", alignItems: "center" },
   LogoCircle: {
     width: 40,
@@ -202,106 +226,74 @@ const Styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EFEFEF",
   },
-  SearchInputText: { flex: 1, marginLeft: 10, fontSize: 15, color: "#B8B8B8" },
+  SearchInputText: { flex: 1, marginLeft: 10, fontSize: 15, color: "#7A7A7A" },
+
+  Center: { alignItems: "center", paddingVertical: 30, gap: 8 },
+  CenterText: { color: "#8A8A8A", fontWeight: "600" },
+
+  EmptyCard: {
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    padding: 24,
+    alignItems: "center",
+    gap: 8,
+  },
+  EmptyTitle: { fontSize: 17, fontWeight: "800", color: "#7A7A7A", marginTop: 4 },
+  EmptySubtitle: {
+    fontSize: 13,
+    color: "#A8A8A8",
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  ErrorText: { color: "#8C2A1A", fontWeight: "600", textAlign: "center" },
+  RetryBtn: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    marginTop: 8,
+  },
+  RetryBtnText: { color: "#8C2A1A", fontWeight: "800" },
+
+  OrdersGridWide: { flexDirection: "row", flexWrap: "wrap", gap: 16 },
   Card: {
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 15,
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 14,
     elevation: 1,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
   },
-  CardPending: { backgroundColor: "#F6F5E3" },
-  CardDelivered: { backgroundColor: "#E9F5E1" },
-  CardTop: { flexDirection: "row", alignItems: "flex-start", marginBottom: 10 },
+  CardWide: {
+    flexBasis: 360,
+    flexGrow: 1,
+    minWidth: 320,
+    marginBottom: 0,
+  },
+  CardTop: { flexDirection: "row", alignItems: "center" },
   BoxIconWrap: {
     width: 70,
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
+    marginRight: 12,
   },
-  OrderInfo: { flex: 1, paddingTop: 5 },
-  OrderStatus: {
-    fontSize: 10,
-    fontWeight: "800",
-    marginBottom: 8,
-    alignSelf: "flex-end",
-    letterSpacing: 0.5,
-  },
-  StatusTextPending: { color: "#C77A72" },
-  StatusTextDelivered: { color: "#7DB56A" },
-  OrderTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#7A7A7A",
+  OrderInfo: { flex: 1, gap: 4 },
+  StatusPill: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
     marginBottom: 4,
   },
-  OrderText: {
-    fontSize: 12,
-    color: "#A8A8A8",
-    fontWeight: "500",
-    marginBottom: 2,
-  },
-  ArrowWrap: {
-    justifyContent: "flex-end",
-    alignItems: "center",
-    paddingLeft: 10,
-    paddingTop: 60,
-  },
-  ProgressContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 5,
-    marginTop: 5,
-  },
-  ProgressStartCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2.5,
-    borderColor: "#8A8A8A",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "transparent",
-  },
-  ProgressStartInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#8A8A8A",
-  },
-  ProgressLineSolid: {
-    flex: 1,
-    height: 2,
-    backgroundColor: "#B8B8B8",
-    marginHorizontal: 2,
-  },
-  ProgressTruckWrap: { marginHorizontal: 5, marginTop: -5 },
-  ProgressLineDashed: {
-    flex: 1,
-    height: 1,
-    borderStyle: "dashed",
-    borderWidth: 1,
-    borderColor: "#C4C4C4",
-    borderRadius: 1,
-    marginHorizontal: 2,
-  },
-  ProgressEndDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#8A8A8A",
-    marginLeft: 5,
-  },
-  ProgressEndCheck: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2.5,
-    borderColor: "#8A8A8A",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 5,
+  StatusPillText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.4 },
+  OrderTitle: { fontSize: 15, fontWeight: "800", color: "#7A7A7A" },
+  OrderText: { fontSize: 12, color: "#A8A8A8" },
+  OrderTotal: {
+    marginTop: 4,
+    fontSize: 14,
+    fontWeight: "800",
+    color: ROLE_THEMES.farmer.primary,
   },
 });

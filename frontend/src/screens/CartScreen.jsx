@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ClientTabBar from "../components/common/ClientTabBar";
 import ScreenContainer from "../components/common/ScreenContainer";
 import { useCart } from "../context/CartContext";
+import { useResponsive } from "../hooks/useResponsive";
 import colors from "../styles/colors";
 import { formatPrice, formatUnitPrice } from "../utils/formatPrice";
 
@@ -25,6 +26,7 @@ export default function CartScreen({ navigation }) {
     removeFromCart,
     updateQuantity,
   } = useCart();
+  const { isDesktop } = useResponsive();
 
   return (
     <ScreenContainer>
@@ -71,85 +73,92 @@ export default function CartScreen({ navigation }) {
             </View>
           </View>
 
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryBox}>
-              <Text style={styles.summaryLabel}>Productos</Text>
-              <Text style={styles.summaryValue}>{items.length}</Text>
+          <View style={isDesktop ? styles.bodyDesktop : null}>
+            <View style={isDesktop ? styles.leftColDesktop : null}>
+              <View style={styles.sectionHeader}>
+                <View>
+                  <Text style={styles.sectionTitle}>Tu seleccion</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Productos anadidos al carrito
+                  </Text>
+                </View>
+
+                {items.length > 0 && (
+                  <TouchableOpacity onPress={clearCart}>
+                    <Text style={styles.seeAllText}>Vaciar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {items.length > 0 ? (
+                items.map((item) => (
+                  <CartItemCard
+                    key={item.id}
+                    item={item}
+                    onRemove={() => removeFromCart(item.id)}
+                    onDecrease={() => updateQuantity(item.id, item.quantity - 0.5)}
+                    onIncrease={() => updateQuantity(item.id, item.quantity + 0.5)}
+                  />
+                ))
+              ) : (
+                <View style={styles.emptyState}>
+                  <Ionicons name="basket-outline" size={32} color={colors.primary} />
+                  <Text style={styles.emptyTitle}>Tu carrito esta vacio</Text>
+                  <Text style={styles.emptySubtitle}>
+                    Explora el catalogo y anade productos frescos para verlos aqui.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.browseButton}
+                    onPress={() => navigation.navigate("Home")}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.browseButtonText}>Ver productos</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
-            <View style={styles.summaryBox}>
-              <Text style={styles.summaryLabel}>Total actual</Text>
-              <Text style={styles.summaryValue}>{formatPrice(total)}</Text>
+            <View style={isDesktop ? styles.rightColDesktop : null}>
+              <View style={isDesktop ? styles.summaryRowDesktop : styles.summaryRow}>
+                <View style={isDesktop ? styles.summaryBoxDesktop : styles.summaryBox}>
+                  <Text style={styles.summaryLabel}>Productos</Text>
+                  <Text style={styles.summaryValue}>{items.length}</Text>
+                </View>
+
+                <View style={isDesktop ? styles.summaryBoxDesktop : styles.summaryBox}>
+                  <Text style={styles.summaryLabel}>Total actual</Text>
+                  <Text style={styles.summaryValue}>{formatPrice(total)}</Text>
+                </View>
+              </View>
+
+              <View style={styles.totalCard}>
+                <Text style={styles.totalCardTitle}>Resumen del pedido</Text>
+
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Subtotal</Text>
+                  <Text style={styles.totalValue}>{formatPrice(subtotal)}</Text>
+                </View>
+
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Envio</Text>
+                  <Text style={styles.totalValue}>{formatPrice(shipping)}</Text>
+                </View>
+
+                <View style={[styles.totalRow, styles.totalRowFinal]}>
+                  <Text style={styles.totalFinalLabel}>Total</Text>
+                  <Text style={styles.totalFinalValue}>{formatPrice(total)}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.checkoutButton, items.length === 0 && styles.disabledButton]}
+                  activeOpacity={0.85}
+                  disabled={items.length === 0}
+                  onPress={() => navigation.navigate("Checkout")}
+                >
+                  <Text style={styles.checkoutButtonText}>Continuar compra</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Tu seleccion</Text>
-              <Text style={styles.sectionSubtitle}>
-                Productos anadidos al carrito
-              </Text>
-            </View>
-
-            {items.length > 0 && (
-              <TouchableOpacity onPress={clearCart}>
-                <Text style={styles.seeAllText}>Vaciar</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {items.length > 0 ? (
-            items.map((item) => (
-              <CartItemCard
-                key={item.id}
-                item={item}
-                onRemove={() => removeFromCart(item.id)}
-                onDecrease={() => updateQuantity(item.id, item.quantity - 0.5)}
-                onIncrease={() => updateQuantity(item.id, item.quantity + 0.5)}
-              />
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="basket-outline" size={32} color={colors.primary} />
-              <Text style={styles.emptyTitle}>Tu carrito esta vacio</Text>
-              <Text style={styles.emptySubtitle}>
-                Explora el catalogo y anade productos frescos para verlos aqui.
-              </Text>
-              <TouchableOpacity
-                style={styles.browseButton}
-                onPress={() => navigation.navigate("Home")}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.browseButtonText}>Ver productos</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View style={styles.totalCard}>
-            <Text style={styles.totalCardTitle}>Resumen del pedido</Text>
-
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Subtotal</Text>
-              <Text style={styles.totalValue}>{formatPrice(subtotal)}</Text>
-            </View>
-
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Envio</Text>
-              <Text style={styles.totalValue}>{formatPrice(shipping)}</Text>
-            </View>
-
-            <View style={[styles.totalRow, styles.totalRowFinal]}>
-              <Text style={styles.totalFinalLabel}>Total</Text>
-              <Text style={styles.totalFinalValue}>{formatPrice(total)}</Text>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.checkoutButton, items.length === 0 && styles.disabledButton]}
-              activeOpacity={0.85}
-              disabled={items.length === 0}
-            >
-              <Text style={styles.checkoutButtonText}>Finalizar compra</Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
 
@@ -292,6 +301,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 22,
   },
+  summaryRowDesktop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 16,
+  },
   summaryBox: {
     width: "48%",
     backgroundColor: "#fff",
@@ -302,6 +317,31 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 8,
     elevation: 2,
+  },
+  summaryBoxDesktop: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  bodyDesktop: {
+    flexDirection: "row",
+    gap: 24,
+    alignItems: "flex-start",
+  },
+  leftColDesktop: {
+    flex: 2,
+    minWidth: 0,
+  },
+  rightColDesktop: {
+    flex: 1,
+    minWidth: 280,
+    maxWidth: 400,
   },
   summaryLabel: {
     fontSize: 12,

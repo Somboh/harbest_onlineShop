@@ -199,6 +199,29 @@ const products = [
   },
 ];
 
+//Email de cada agricultor mock. Hace falta para que el checkout pueda agrupar
+//los productos del carrito por agricultor y crear un pedido por cada uno.
+//Si en producción los agricultores son cuentas reales, hay que sustituir estos
+//emails por los reales (o leer los productos directamente del backend, que ya
+//llevan email_agricultor).
+const SELLER_EMAILS = {
+  "Granjas Jaume": "granjasjaume@example.com",
+  "Illo verdulerias": "illoverdu@example.com",
+  "Antonio & Co": "antonio@example.com",
+  "Verde Vivo": "verdevivo@example.com",
+  "Esencias del Sur": "esenciasdelsur@example.com",
+  "Huerta del Sur": "huertadelsur@example.com",
+  EcoFruit: "ecofruit@example.com",
+  "Huerta Viva": "huertaviva@example.com",
+  Jaume: "jaume@example.com",
+};
+
+products.forEach((product) => {
+  if (!product.email_agricultor) {
+    product.email_agricultor = SELLER_EMAILS[product.seller] ?? null;
+  }
+});
+
 export const mockProducts = products;
 
 export const featuredProducts = products.filter((product) => product.featured);
