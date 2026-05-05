@@ -27,6 +27,3 @@ Cuando se de a Aceptar, que sea Enviar o Cancelar. (con actualizaciones en BD pa
 
 -
 
-Quita ecológico, más vendido, temporada y entrega hoy
-
-Por qué hay productos que no están disponibles?

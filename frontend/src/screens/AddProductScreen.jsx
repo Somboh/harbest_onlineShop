@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +15,8 @@ import {
 
 import FarmerTabBar from "../components/common/FarmerTabBar";
 import ScreenContainer from "../components/common/ScreenContainer";
+import { useAuth } from "../context/AuthContext";
+import productsService from "../services/productsService";
 import { ROLE_THEMES } from "../styles/roleThemes";
 
 const categoryOptions = [
@@ -29,12 +32,20 @@ const previewImages = {
 };
 
 export default function AddProductScreen({ navigation }) {
+  const { user } = useAuth();
+
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Verduras");
   const [description, setDescription] = useState("");
   const [stock, setStock] = useState("");
   const [price, setPrice] = useState("");
   const [unit, setUnit] = useState("kg");
+  const [photo, setPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const fileInputRef = useRef(null);
 
   const previewName = name.trim() || "Tomates de la huerta";
   const previewStock = stock.trim() || "0";
@@ -44,8 +55,100 @@ export default function AddProductScreen({ navigation }) {
     return name.trim() && stock.trim() && price.trim();
   }, [name, stock, price]);
 
-  const handleSave = () => {
-    navigation.navigate("Inventory");
+  //En web abrimos un <input type="file"> oculto. En nativo no hay picker
+  //instalado (no usamos expo-image-picker), así que se enviará la imagen de
+  //preview de la categoría como fallback.
+  const handlePickPhoto = () => {
+    if (Platform.OS !== "web") {
+      setErrorMessage(
+        "El selector de foto solo está disponible en web. Se usará la imagen de preview.",
+      );
+      return;
+    }
+    if (!fileInputRef.current) {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = (event) => {
+        const file = event.target.files?.[0];
+        if (file) {
+          setPhoto(file);
+          setPhotoPreview(URL.createObjectURL(file));
+          setErrorMessage("");
+        }
+      };
+      fileInputRef.current = input;
+    }
+    fileInputRef.current.click();
+  };
+
+  //Si el agricultor no eligió foto, mandamos la del preview de la categoría.
+  //En web la convertimos a File; en nativo a {uri,name,type}.
+  const buildFotoForUpload = async () => {
+    if (photo) return photo;
+    const asset = Image.resolveAssetSource(previewImages[category]);
+    if (Platform.OS === "web") {
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+      return new File([blob], `preview-${category}.jpg`, {
+        type: blob.type || "image/jpeg",
+      });
+    }
+    return {
+      uri: asset.uri,
+      name: `preview-${category}.jpg`,
+      type: "image/jpeg",
+    };
+  };
+
+  const handleSave = async () => {
+    setErrorMessage("");
+
+    if (!canSave) {
+      setErrorMessage("Completa nombre, stock y precio para continuar.");
+      return;
+    }
+
+    const precioNum = Number(price.replace(",", "."));
+    const cantidadNum = Number(stock);
+    if (!Number.isFinite(precioNum) || precioNum <= 0) {
+      setErrorMessage("Introduce un precio válido (mayor que 0).");
+      return;
+    }
+    if (!Number.isInteger(cantidadNum) || cantidadNum < 0) {
+      setErrorMessage("El stock debe ser un número entero positivo.");
+      return;
+    }
+
+    if (!user?.email) {
+      setErrorMessage("Tu sesión ha caducado. Inicia sesión de nuevo.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const foto = await buildFotoForUpload();
+      const productData = {
+        nombre: name.trim(),
+        descripcion: description.trim() || name.trim(),
+        precio: precioNum,
+        cantidad: cantidadNum,
+        email_agricultor: user.email,
+        categoria: category,
+        valoracion: 0,
+      };
+      const res = await productsService.createProduct(productData, foto);
+      if (res?.status === "OK") {
+        navigation.navigate("ProductosAgricultor", { category: "Todos" });
+      } else {
+        setErrorMessage(res?.message ?? "No se pudo crear el producto.");
+      }
+    } catch (error) {
+      console.error("Error creando producto:", error);
+      setErrorMessage(error?.message ?? "No se pudo crear el producto.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -82,7 +185,11 @@ export default function AddProductScreen({ navigation }) {
 
             <View style={styles.previewCard}>
               <Image
-                source={previewImages[category]}
+                source={
+                  photoPreview
+                    ? { uri: photoPreview }
+                    : previewImages[category]
+                }
                 style={styles.previewImage}
               />
 
@@ -93,12 +200,15 @@ export default function AddProductScreen({ navigation }) {
                     size={14}
                     color={theme.primary}
                   />
-                  <Text style={styles.previewBadgeText}>Preview</Text>
+                  <Text style={styles.previewBadgeText}>
+                    {photoPreview ? "Tu foto" : "Preview"}
+                  </Text>
                 </View>
 
                 <TouchableOpacity
                   style={styles.photoButton}
                   activeOpacity={0.85}
+                  onPress={handlePickPhoto}
                 >
                   <Ionicons name="image-outline" size={16} color="#fff" />
                   <Text style={styles.photoButtonText}>Cambiar foto</Text>
@@ -252,23 +362,40 @@ export default function AddProductScreen({ navigation }) {
             </View>
           </ScrollView>
 
+          {errorMessage ? (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={18} color="#B3533D" />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          ) : null}
+
           <View style={styles.bottomBar}>
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={() => navigation.navigate("Inventory")}
+              onPress={() => navigation.navigate("HomeAgricultor")}
               activeOpacity={0.85}
+              disabled={submitting}
             >
               <Text style={styles.secondaryButtonText}>Cancelar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+              style={[
+                styles.saveButton,
+                (!canSave || submitting) && styles.saveButtonDisabled,
+              ]}
               onPress={handleSave}
               activeOpacity={0.85}
-              disabled={!canSave}
+              disabled={!canSave || submitting}
             >
-              <Ionicons name="checkmark" size={18} color="#fff" />
-              <Text style={styles.saveButtonText}>Guardar</Text>
+              {submitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={18} color="#fff" />
+              )}
+              <Text style={styles.saveButtonText}>
+                {submitting ? "Guardando..." : "Guardar"}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -627,6 +754,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     color: theme.textSoft,
+  },
+  errorBanner: {
+    position: "absolute",
+    left: 20,
+    right: 20,
+    bottom: 174,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FBE9E5",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    color: "#8C2A1A",
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
   },
   bottomBar: {
     position: "absolute",

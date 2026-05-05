@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -7,14 +8,16 @@ import {
   Image,
   ScrollView,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
 import colors from "../styles/colors";
 import ScreenContainer from "../components/common/ScreenContainer";
-import { mockProducts } from "../data/mockProducts";
 import { useAuth } from "../context/AuthContext";
 import { useDisplaySettings } from "../context/DisplaySettingsContext";
 import { useResponsive } from "../hooks/useResponsive";
+import { hydrateProducts } from "../data/productAdapter";
+import productsService from "../services/productsService";
 import { getDisplayMode } from "../styles/displayModes";
 import { ROLE_THEMES } from "../styles/roleThemes";
 
@@ -28,22 +31,45 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
   const category = route.params?.category || "Todos";
   const isAllCategories = category === "Todos";
 
-  // Filtrar productos del agricultor actual
-  const filteredProducts = useMemo(() => {
-    return mockProducts.filter((product) => {
-      // Filtrar por agricultor logueado (por nombre del vendedor para mockData)
-      const isByCurrentFarmer = user && product.seller === user.name;
+  const [farmerProducts, setFarmerProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-      if (!isByCurrentFarmer) return false;
-
-      // Filtrar por categoría si no es "Ver Todo"
-      if (!isAllCategories && product.category !== category) {
-        return false;
+  //Recargamos cada vez que la pantalla recibe foco para que un producto recién
+  //creado en AddProduct aparezca al volver aquí.
+  useFocusEffect(
+    React.useCallback(() => {
+      let cancelled = false;
+      const email = user?.email;
+      if (!email) {
+        setFarmerProducts([]);
+        setLoading(false);
+        return undefined;
       }
+      setLoading(true);
+      (async () => {
+        try {
+          const raw = await productsService.getProductsByFarmer(email);
+          if (!cancelled) setFarmerProducts(hydrateProducts(raw));
+        } catch (err) {
+          console.error("Error cargando productos del agricultor:", err);
+          if (!cancelled) setFarmerProducts([]);
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [user?.email]),
+  );
 
-      return true;
-    });
-  }, [user, category, isAllCategories]);
+  const filteredProducts = useMemo(() => {
+    if (isAllCategories) return farmerProducts;
+    const target = category.toLowerCase();
+    return farmerProducts.filter(
+      (product) => (product.category || "").toLowerCase() === target,
+    );
+  }, [farmerProducts, category, isAllCategories]);
 
   const getCategoryIcon = () => {
     const icons = {
@@ -202,14 +228,25 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
           </View>
 
           {/* LISTADO DE PRODUCTOS */}
-          {filteredProducts.length > 0 ? (
+          {loading ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator color={display.primary} />
+              <Text style={[styles.emptySubtext, { color: display.textSoft }]}>
+                Cargando tus productos...
+              </Text>
+            </View>
+          ) : filteredProducts.length > 0 ? (
             <View style={styles.productsGrid}>
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
                   product={product}
                   display={display}
-                  onPress={() => navigation.navigate("Inventory")}
+                  onPress={() =>
+                    navigation.navigate("ProductDetail", {
+                      productId: product.id,
+                    })
+                  }
                   wide={wide}
                 />
               ))}
@@ -227,7 +264,7 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
                 No hay productos en {category.toLowerCase()}
               </Text>
               <Text style={[styles.emptySubtext, { color: display.textSoft }]}>
-                Agrega nuevos productos desde tu inventario
+                Crea uno nuevo para empezar a vender
               </Text>
               <TouchableOpacity
                 style={[styles.addButton, { backgroundColor: display.primary }]}
@@ -240,12 +277,12 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
           )}
         </ScrollView>
 
-        {/* BOTÓN FLOTANTE PARA IR AL INVENTARIO */}
+        {/* BOTÓN FLOTANTE PARA AÑADIR PRODUCTO */}
         <TouchableOpacity
           style={[styles.floatingButton, { backgroundColor: display.primary }]}
-          onPress={() => navigation.navigate("Inventory")}
+          onPress={() => navigation.navigate("AddProduct")}
         >
-          <Ionicons name="archive" size={24} color="#fff" />
+          <Ionicons name="add" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
     </ScreenContainer>
@@ -266,8 +303,20 @@ const ProductCard = ({ product, display, onPress, wide }) => (
     onPress={onPress}
   >
     <View style={styles.imageWrapper}>
-      <Image source={product.image} style={styles.productImage} />
-      {product.badge && (
+      {product.image ? (
+        <Image source={product.image} style={styles.productImage} />
+      ) : (
+        <View
+          style={[
+            styles.productImage,
+            styles.productImagePlaceholder,
+            { backgroundColor: display.primarySoft },
+          ]}
+        >
+          <Ionicons name="leaf" size={32} color={display.primary} />
+        </View>
+      )}
+      {product.badge ? (
         <View
           style={[
             styles.productOverlayBadge,
@@ -276,7 +325,7 @@ const ProductCard = ({ product, display, onPress, wide }) => (
         >
           <Text style={styles.productOverlayBadgeText}>{product.badge}</Text>
         </View>
-      )}
+      ) : null}
     </View>
 
     <View style={styles.productContent}>
@@ -296,10 +345,10 @@ const ProductCard = ({ product, display, onPress, wide }) => (
       <View style={styles.productFooter}>
         <View>
           <Text style={[styles.productPrice, { color: display.primary }]}>
-            {product.price.toFixed(2)}€
+            {Number(product.price ?? 0).toFixed(2)}€
           </Text>
           <Text style={[styles.productUnit, { color: display.textSoft }]}>
-            por {product.unit}
+            por {product.unit || "kg"}
           </Text>
         </View>
 
@@ -308,7 +357,7 @@ const ProductCard = ({ product, display, onPress, wide }) => (
           activeOpacity={0.85}
         >
           <Text style={[styles.stockText, { color: display.primary }]}>
-            {product.stock} {product.unit}
+            {product.stock ?? 0} {product.unit || "kg"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -457,6 +506,17 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     resizeMode: "cover",
+  },
+
+  productImagePlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  loadingState: {
+    paddingVertical: 36,
+    alignItems: "center",
+    gap: 12,
   },
 
   productOverlayBadge: {
