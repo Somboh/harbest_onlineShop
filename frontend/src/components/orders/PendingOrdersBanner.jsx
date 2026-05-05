@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -34,6 +35,12 @@ function actionsFor(estado) {
   return [];
 }
 
+function summaryFor(estado) {
+  if (estado === "pendiente") return "quiere comprarte un producto";
+  if (estado === "preparando") return "está esperando que envíes su pedido";
+  return "";
+}
+
 //Banner flotante que vive en HomeAgricultor. Muestra el primer pedido que
 //requiere acción y permite aceptar/rechazar (o enviar/cancelar). Al actuar,
 //recarga y muestra el siguiente.
@@ -43,7 +50,8 @@ function actionsFor(estado) {
 export default function PendingOrdersBanner({ navigation, bottom = 100 }) {
   const farmerColor = ROLE_THEMES.farmer.primary;
 
-  const [orders, setOrders] = useState([]);
+  const [pendings, setPendings] = useState([]);
+  const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
 
@@ -52,7 +60,7 @@ export default function PendingOrdersBanner({ navigation, bottom = 100 }) {
     try {
       const user = await authService.getCurrentUser();
       if (!user?.email) {
-        setOrders([]);
+        setPendings([]);
         return;
       }
       const data = await ordersService.getOrdersByFarmer(user.email);
@@ -62,10 +70,10 @@ export default function PendingOrdersBanner({ navigation, bottom = 100 }) {
       //La fila más vieja primero: el agricultor responde a las que llevan más
       //tiempo esperando.
       pending.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-      setOrders(pending);
+      setPendings(pending);
     } catch (err) {
       console.error("Error cargando pendientes:", err);
-      setOrders([]);
+      setPendings([]);
     } finally {
       setLoading(false);
     }
@@ -77,17 +85,49 @@ export default function PendingOrdersBanner({ navigation, bottom = 100 }) {
     }, [reload]),
   );
 
-  if (loading || orders.length === 0) return null;
+  //Carga las líneas+productos+fotos del primer pedido pendiente para poder
+  //mostrar foto/nombre/cantidad/precio en el popup. La API /pedidos/:id ya
+  //devuelve `foto_url` aplanada por línea.
+  const firstId = pendings[0]?.id;
+  useEffect(() => {
+    if (!firstId) {
+      setDetail(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await ordersService.getOrderById(firstId);
+        if (!cancelled) setDetail(data);
+      } catch (err) {
+        console.error("Error cargando detalle del pendiente:", err);
+        if (!cancelled) setDetail(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [firstId]);
 
-  const order = orders[0];
+  if (loading || pendings.length === 0) return null;
+
+  const order = pendings[0];
   const actions = actionsFor(order.estado);
 
-  //Para el preview del producto cargamos las líneas perezosamente — hacemos
-  //click → vamos al detalle. Aquí mostramos un resumen mínimo.
-  const summary =
-    order.estado === "pendiente"
-      ? "quiere comprarte un pedido"
-      : "está esperando que envíes su pedido";
+  //Producto principal a destacar en el popup; el resto se resume con un
+  //contador. Si aún no hemos cargado el detalle, dejamos firstLine en null y
+  //mostramos un placeholder.
+  const lineas = detail?.lineas ?? [];
+  const firstLine = lineas[0] ?? null;
+  const extraProducts = Math.max(lineas.length - 1, 0);
+  const fotoUrl = firstLine?.producto?.foto_url ?? null;
+  const productName = firstLine?.producto?.nombre ?? "Pedido";
+  const cantidad = firstLine ? Number(firstLine.cantidad) : null;
+  const precioUnit = firstLine ? Number(firstLine.precio_unitario) : null;
+  const lineSubtotal =
+    firstLine && cantidad != null && precioUnit != null
+      ? cantidad * precioUnit
+      : null;
 
   const handleAction = async (action) => {
     setActionLoading(action.key);
@@ -105,29 +145,71 @@ export default function PendingOrdersBanner({ navigation, bottom = 100 }) {
     <View style={[styles.wrap, { bottom }]} pointerEvents="box-none">
       <TouchableOpacity
         activeOpacity={0.95}
-        onPress={() => navigation.navigate("OrderDetailFarmer", { orderId: order.id })}
+        onPress={() =>
+          navigation.navigate("OrderDetailFarmer", { orderId: order.id })
+        }
         style={styles.card}
       >
-        <View style={styles.topRow}>
+        <View style={styles.headerRow}>
           <View style={[styles.avatar, { backgroundColor: farmerColor + "33" }]}>
-            <Ionicons name="person-outline" size={20} color={farmerColor} />
+            <Ionicons name="person-outline" size={18} color={farmerColor} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.line1} numberOfLines={1}>
+            <Text style={styles.userEmail} numberOfLines={1}>
               {order.user_email}
             </Text>
-            <Text style={styles.line2} numberOfLines={1}>
-              {summary}
-            </Text>
-            <Text style={styles.line3}>
-              Pedido #{order.id} · {Number(order.total ?? 0).toFixed(2)} €
+            <Text style={styles.userSummary} numberOfLines={1}>
+              {summaryFor(order.estado)}
             </Text>
           </View>
-          {orders.length > 1 ? (
+          {pendings.length > 1 ? (
             <View style={[styles.countBadge, { backgroundColor: farmerColor }]}>
-              <Text style={styles.countBadgeText}>+{orders.length - 1}</Text>
+              <Text style={styles.countBadgeText}>+{pendings.length - 1}</Text>
             </View>
           ) : null}
+        </View>
+
+        <View style={styles.productRow}>
+          {fotoUrl ? (
+            <Image source={{ uri: fotoUrl }} style={styles.productImage} />
+          ) : (
+            <View
+              style={[
+                styles.productImage,
+                styles.productImageFallback,
+                { backgroundColor: farmerColor + "22" },
+              ]}
+            >
+              <Ionicons name="basket-outline" size={26} color={farmerColor} />
+            </View>
+          )}
+
+          <View style={styles.productInfo}>
+            <Text style={styles.productName} numberOfLines={1}>
+              {productName}
+            </Text>
+            {cantidad != null ? (
+              <Text style={styles.productMeta}>
+                {cantidad.toFixed(1)} kg
+              </Text>
+            ) : null}
+            {precioUnit != null ? (
+              <Text style={[styles.productPrice, { color: farmerColor }]}>
+                {lineSubtotal != null
+                  ? `${lineSubtotal.toFixed(2)} €`
+                  : `${precioUnit.toFixed(2)} €/kg`}
+              </Text>
+            ) : (
+              <Text style={[styles.productPrice, { color: farmerColor }]}>
+                {Number(order.total ?? 0).toFixed(2)} €
+              </Text>
+            )}
+            {extraProducts > 0 ? (
+              <Text style={styles.extraProducts}>
+                +{extraProducts} producto{extraProducts === 1 ? "" : "s"} más
+              </Text>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.actionsRow}>
@@ -177,22 +259,22 @@ const styles = StyleSheet.create({
     padding: 14,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 12,
     gap: 12,
   },
-  topRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },
-  line1: { fontSize: 14, fontWeight: "800", color: "#5A5A5A" },
-  line2: { fontSize: 12, color: "#7A7A7A", marginTop: 2 },
-  line3: { fontSize: 11, color: "#A8A8A8", marginTop: 2, fontWeight: "600" },
+  userEmail: { fontSize: 13, fontWeight: "800", color: "#5A5A5A" },
+  userSummary: { fontSize: 11, color: "#A8A8A8", marginTop: 2 },
   countBadge: {
     minWidth: 30,
     height: 24,
@@ -203,16 +285,38 @@ const styles = StyleSheet.create({
   },
   countBadgeText: { color: "#fff", fontWeight: "800", fontSize: 12 },
 
+  productRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingVertical: 4,
+  },
+  productImage: {
+    width: 78,
+    height: 78,
+    borderRadius: 18,
+    resizeMode: "cover",
+  },
+  productImageFallback: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  productInfo: { flex: 1, minWidth: 0 },
+  productName: { fontSize: 17, fontWeight: "800", color: "#5A5A5A" },
+  productMeta: { fontSize: 13, color: "#7A7A7A", marginTop: 4, fontWeight: "600" },
+  productPrice: { fontSize: 15, fontWeight: "800", marginTop: 4 },
+  extraProducts: { fontSize: 11, color: "#A8A8A8", marginTop: 4, fontWeight: "600" },
+
   actionsRow: { flexDirection: "row", gap: 10 },
   actionButton: {
     flex: 1,
-    minHeight: 44,
-    borderRadius: 14,
+    minHeight: 50,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 12,
   },
   actionDanger: { backgroundColor: "#FBE9E5" },
-  actionText: { fontWeight: "800", fontSize: 14 },
+  actionText: { fontWeight: "800", fontSize: 15 },
   disabled: { opacity: 0.6 },
 });
