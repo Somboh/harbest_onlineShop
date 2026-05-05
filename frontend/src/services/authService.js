@@ -70,6 +70,23 @@ export const authService = {
     }
   },
 
+  async farmerRegister(data) {
+    try {
+      const isFormData =
+        typeof FormData !== "undefined" && data instanceof FormData;
+      const response = await fetch(`${url}/auth/farmer/register`, {
+        method: "POST",
+        headers: isFormData ? {} : { "Content-Type": "application/json" },
+        body: isFormData ? data : JSON.stringify(data),
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Error en el registro del agricultor:", error);
+      return { status: "ERROR", message: "No se pudo conectar con el servidor" };
+    }
+  },
+
   async logout() {
     try {
       await AsyncStorage.removeItem("token");

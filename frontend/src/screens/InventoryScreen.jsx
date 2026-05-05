@@ -45,7 +45,7 @@ export default function InventoryScreen({ navigation }) {
       stock: 86,
       unit: "kg",
       status: "Disponible",
-      image: require("../../assets/images/comida/naranjas.webp"),
+      image: require("../../assets/images/comida/naranjas.jpg"),
     },
     {
       id: "4",
@@ -54,7 +54,7 @@ export default function InventoryScreen({ navigation }) {
       stock: 0,
       unit: "uds",
       status: "Agotado",
-      image: require("../../assets/images/comida/lechuga.webp"),
+      image: require("../../assets/images/comida/lechuga.jpg"),
     },
     {
       id: "5",

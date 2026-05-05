@@ -8,7 +8,7 @@ import DesktopSidebar, { SIDEBAR_WIDTH_PX } from './DesktopSidebar';
 import DisplayModeMenu from './DisplayModeMenu';
 
 //Rutas que NO deben mostrar la sidebar (auth/onboarding).
-const UNAUTHED_ROUTES = new Set(['Splash', 'Login', 'Register']);
+const UNAUTHED_ROUTES = new Set(['Splash', 'Login', 'Register', 'RegisterFarmer']);
 
 const FARMER_ROUTES = new Set([
   'HomeAgricultor',

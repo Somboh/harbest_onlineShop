@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 // --- 1. Pantallas Comunes ---
 import LoginScreen from "../screens/LoginScreen";
+import RegisterFarmerScreen from "../screens/RegisterFarmerScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import SplashScreen from "../screens/SplashScreen";
 
@@ -46,6 +47,7 @@ export default function StackNavigator() {
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="RegisterFarmer" component={RegisterFarmerScreen} />
 
         {/* CLIENTE */}
         <Stack.Screen name="Home" component={HomeScreen} />

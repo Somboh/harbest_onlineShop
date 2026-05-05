@@ -195,7 +195,12 @@ export default function LoginScreen({ navigation }) {
         ¿No tienes cuenta?{" "}
         <Text
           style={[styles.registerLink, { color: themeColors.primary }]}
-          onPress={() => navigation.navigate("Register", { role })}
+          onPress={() =>
+            navigation.navigate(
+              isFarmer ? "RegisterFarmer" : "Register",
+              isFarmer ? undefined : { role },
+            )
+          }
         >
           Regístrate
         </Text>

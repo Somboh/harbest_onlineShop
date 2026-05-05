@@ -33,7 +33,7 @@ export default function SearchScreen({ navigation }) {
       seller: 'Granjas Jaume',
       price: '4,90 €/kg',
       category: 'Frutas',
-      image: require('../../assets/images/comida/naranjas.webp'),
+      image: require('../../assets/images/comida/naranjas.jpg'),
     },
     {
       id: 2,
@@ -41,7 +41,7 @@ export default function SearchScreen({ navigation }) {
       seller: 'Illo verdulerías',
       price: '6,20 €/kg',
       category: 'Frutas',
-      image: require('../../assets/images/comida/aguacate.webp'),
+      image: require('../../assets/images/comida/aguacate.jpg'),
     },
     {
       id: 3,
@@ -57,7 +57,7 @@ export default function SearchScreen({ navigation }) {
       seller: 'Verde Vivo',
       price: '2,95 €/kg',
       category: 'Verduras',
-      image: require('../../assets/images/comida/brocoli.webp'),
+      image: require('../../assets/images/comida/brocoli.jpg'),
     },
     {
       id: 5,
@@ -65,7 +65,7 @@ export default function SearchScreen({ navigation }) {
       seller: 'Esencias del Sur',
       price: '2,50 €',
       category: 'Especias',
-      image: require('../../assets/images/comida/canela.webp'),
+      image: require('../../assets/images/comida/canela.jpg'),
     },
     {
       id: 6,
