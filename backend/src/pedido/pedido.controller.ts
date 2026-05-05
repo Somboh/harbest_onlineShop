@@ -17,6 +17,11 @@ export class PedidoController {
         return this.pedidoService.getPedidosByFarmer(email);
     }
 
+    @Get("/farmer/:email/beneficios")
+    async getBeneficiosByFarmer(@Param("email") email: string) {
+        return this.pedidoService.getBeneficiosByFarmer(email);
+    }
+
     @Get("/:id")
     async getPedidoById(@Param("id") id: string) {
         return this.pedidoService.getPedidoById(id);

@@ -89,6 +89,12 @@ export const ordersService = {
     return api.get(`/pedidos/farmer/${encodeURIComponent(email)}`);
   },
 
+  //Devuelve [{ farmer_email, anio, mes, total, pedidos, updated_at }, ...]
+  //ordenado por año/mes desc. Cada fila acumula los pedidos de un mes.
+  async getMonthlyEarnings(email) {
+    return api.get(`/pedidos/farmer/${encodeURIComponent(email)}/beneficios`);
+  },
+
   async getOrderById(id) {
     return api.get(`/pedidos/${id}`);
   },

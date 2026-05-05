@@ -14,10 +14,13 @@ const FARMER_ROUTES = new Set([
   'HomeAgricultor',
   'OrdersAgricultor',
   'OrdersScreenAgricultor',
+  'OrderDetailFarmer',
   'AddProduct',
   'Inventory',
   'SearchAgricultor',
   'ProductosAgricultor',
+  'ProductDetailFarmer',
+  'BenefitsAgricultor',
   'ProfileAgricultor',
 ]);
 

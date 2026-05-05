@@ -243,7 +243,7 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
                   product={product}
                   display={display}
                   onPress={() =>
-                    navigation.navigate("ProductDetail", {
+                    navigation.navigate("ProductDetailFarmer", {
                       productId: product.id,
                     })
                   }

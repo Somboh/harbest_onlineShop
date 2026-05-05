@@ -80,25 +80,23 @@ export default function ProfileScreenAgricultor({ navigation }) {
 
           {/* SECCIÓN GESTIÓN */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Gestión</Text>
-
-            <ProfileOption
-              iconType="ion"
-              icon="person-outline"
-              label="Gestión de cuenta"
-            />
+            <Text style={styles.sectionTitle}>Tu cuenta</Text>
 
             <ProfileOption
               iconType="material"
               icon="star-four-points-outline"
               label="Mis beneficios"
               highlight
+              onPress={() => navigation.navigate("BenefitsAgricultor")}
             />
 
             <ProfileOption
               iconType="material"
               icon="sprout-outline"
               label="Mis productos"
+              onPress={() =>
+                navigation.navigate("ProductosAgricultor", { category: "Todos" })
+              }
             />
 
             <ProfileOption
@@ -110,32 +108,9 @@ export default function ProfileScreenAgricultor({ navigation }) {
 
             <ProfileOption
               iconType="material"
-              icon="chart-line"
-              label="Estadísticas de ventas"
-            />
-          </View>
-
-          {/* SECCIÓN SOPORTE */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Herramientas</Text>
-
-            <ProfileOption
-              iconType="material"
               icon="warehouse"
               label="Inventario"
               onPress={() => navigation.navigate("Inventory")}
-            />
-
-            <ProfileOption
-              iconType="ion"
-              icon="settings-outline"
-              label="Configuración"
-            />
-
-            <ProfileOption
-              iconType="ion"
-              icon="help-circle-outline"
-              label="Ayuda"
             />
           </View>
 

@@ -25,6 +25,7 @@ export function hydrateProduct(raw) {
     image: raw.foto_url ? { uri: raw.foto_url } : null,
     featured: raw.featured ?? false,
     stock: raw.cantidad ?? raw.stock ?? 0,
+    stockMax: raw.cantidad_inicial ?? raw.cantidad ?? raw.stock ?? 0,
   };
 }
 

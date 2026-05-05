@@ -63,6 +63,11 @@ export const productsService = {
   async deleteProduct(id) {
     return api.delete(`/product/${id}`, { auth: true });
   },
+
+  //Restaura cantidad al valor "lleno" guardado al crear/editar el producto.
+  async reponerProduct(id) {
+    return api.patch(`/product/${id}/reponer`, {}, { auth: true });
+  },
 };
 
 export default productsService;

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ProductService } from "./product.service";
 import { Product } from "./product.dto";
 import { AuthGuard } from "src/Auth/auth.guard";
@@ -70,6 +70,12 @@ export class ProductController {
     }))
     async updateProduct(@Param("id") id: string, @Body() product: Product, @UploadedFile() foto?: Express.Multer.File){
         return await this.productService.updateProduct(id, product, foto);
+    }
+
+    @UseGuards(AuthGuard)
+    @Patch("/:id/reponer")
+    async reponerProduct(@Param("id") id: string){
+        return await this.productService.reponerProduct(id);
     }
 
     @UseGuards(AuthGuard)

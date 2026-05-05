@@ -60,6 +60,9 @@ export class ProductService {
                 descripcion: product.descripcion,
                 precio: product.precio,
                 cantidad: product.cantidad,
+                //Guardamos el "lleno" inicial para que el botón Reponer pueda
+                //volver al valor original aunque se haya vendido todo el stock.
+                cantidad_inicial: product.cantidad,
                 email_agricultor: product.email_agricultor,
                 categoria: product.categoria,
                 valoracion: 0,
@@ -89,6 +92,14 @@ export class ProductService {
         if(error || !data){
             throw new Error("Producto no encontrado");
         }
+
+        //Si el agricultor edita y sube la cantidad por encima del "lleno"
+        //histórico, ese pasa a ser el nuevo lleno. Así Reponer siempre
+        //devuelve al máximo conocido.
+        const nuevaCantidadInicial = Math.max(
+            Number(data.cantidad_inicial ?? 0),
+            Number(product.cantidad ?? 0),
+        );
 
         //si se ha subido una nueva imagen, hay que actualizar la foto del producto junto al resto de datos
         if(foto){
@@ -121,12 +132,13 @@ export class ProductService {
 
             try {
                 const { error: fotoErrorUpdate } = await this.db.getClient().from("fotos").update({ path: resFoto.secure_url, id: resFoto.public_id }).eq("id", data.foto);
-                const { error: productError } = await this.db.getClient().from("producto").update({ 
+                const { error: productError } = await this.db.getClient().from("producto").update({
                     nombre: product.nombre,
                     foto: resFoto.public_id,
                     descripcion: product.descripcion,
                     precio: product.precio,
                     cantidad: product.cantidad,
+                    cantidad_inicial: nuevaCantidadInicial,
                     email_agricultor: product.email_agricultor,
                     categoria: product.categoria,
                     valoracion: product.valoracion,
@@ -156,6 +168,7 @@ export class ProductService {
                     descripcion: product.descripcion,
                     precio: product.precio,
                     cantidad: product.cantidad,
+                    cantidad_inicial: nuevaCantidadInicial,
                     email_agricultor: product.email_agricultor,
                     categoria: product.categoria,
                     valoracion: product.valoracion,
@@ -165,6 +178,32 @@ export class ProductService {
             }
         }
         return {status: "OK", message:"Producto actualizado"};
+    }
+
+    //Reponer = volver a llenar el stock al valor inicial guardado al crear o
+    //al editar el producto. No toca el resto de campos para no requerir foto
+    //ni multipart en una operación tan simple.
+    async reponerProduct(id: string){
+        const {data, error} = await this.db.getClient()
+            .from("producto")
+            .select("cantidad_inicial")
+            .eq("id", id)
+            .single();
+        if(error || !data){
+            return {status: "ERROR", message: "Producto no encontrado"};
+        }
+        const objetivo = Number(data.cantidad_inicial ?? 0);
+        if(!Number.isFinite(objetivo) || objetivo <= 0){
+            return {status: "ERROR", message: "Este producto no tiene cantidad inicial registrada"};
+        }
+        const {error: updateError} = await this.db.getClient()
+            .from("producto")
+            .update({cantidad: objetivo})
+            .eq("id", id);
+        if(updateError){
+            return {status: "ERROR", message: "No se pudo reponer el producto: " + updateError.message};
+        }
+        return {status: "OK", message: "Producto repuesto", cantidad: objetivo};
     }
 
     async deleteProduct(id: string){

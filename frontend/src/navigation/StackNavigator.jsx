@@ -26,10 +26,12 @@ import SearchScreen from "../screens/SearchScreen";
 
 // --- 3. Pantallas del Agricultor (Tuyas + Compañera) ---
 import AddProductScreen from "../screens/AddProductScreen";
+import BenefitsAgricultorScreen from "../screens/BenefitsAgricultorScreen";
 import HomeAgricultorScreen from "../screens/HomeAgricultorScreen";
 import InventoryScreen from "../screens/InventoryScreen";
 import OrderDetailFarmerScreen from "../screens/OrderDetailFarmerScreen";
 import OrdersAgricultorScreen from "../screens/OrdersAgricultorScreen";
+import ProductDetailFarmerScreen from "../screens/ProductDetailFarmerScreen";
 import ProductosAgricultorScreen from "../screens/ProductosAgricultorScreen";
 import ProfileScreenAgricultor from "../screens/ProfileScreenAgricultor";
 import SearchAgricultorScreen from "../screens/SearchAgricultorScreen";
@@ -82,6 +84,10 @@ export default function StackNavigator() {
         <Stack.Screen name="Inventory" component={InventoryScreen} />
         <Stack.Screen name="AddProduct" component={AddProductScreen} />
         <Stack.Screen
+          name="ProductDetailFarmer"
+          component={ProductDetailFarmerScreen}
+        />
+        <Stack.Screen
           name="SearchAgricultor"
           component={SearchAgricultorScreen}
         />
@@ -92,6 +98,10 @@ export default function StackNavigator() {
         <Stack.Screen
           name="OrderDetailFarmer"
           component={OrderDetailFarmerScreen}
+        />
+        <Stack.Screen
+          name="BenefitsAgricultor"
+          component={BenefitsAgricultorScreen}
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -143,6 +143,17 @@ export class PedidoService {
     }
 
     async updateEstado(id: string, estado: EstadoPedido) {
+        //Cargamos el estado anterior para saber si la transición a "entregado"
+        //es nueva. Si es la primera vez, sumamos el total al beneficio mensual.
+        const { data: prev, error: prevError } = await this.db.getClient()
+            .from("pedido")
+            .select("estado")
+            .eq("id", id)
+            .single();
+        if (prevError || !prev) {
+            throw new NotFoundException("Pedido no encontrado");
+        }
+
         const { data, error } = await this.db.getClient()
             .from("pedido")
             .update({ estado })
@@ -153,6 +164,46 @@ export class PedidoService {
         if (error || !data) {
             throw new NotFoundException("Pedido no encontrado");
         }
+
+        if (prev.estado !== "entregado" && estado === "entregado") {
+            await this.acumularBeneficio(data);
+        }
+
         return { status: "OK", message: "Estado actualizado", pedido: data };
+    }
+
+    //Suma el total del pedido al acumulado mensual del agricultor mediante la
+    //función SQL add_beneficio_mensual (atomic upsert). Si la llamada falla
+    //solo lo registramos: no queremos que un fallo en el ledger bloquee la
+    //transición de estado del pedido.
+    private async acumularBeneficio(pedido: any) {
+        try {
+            const fecha = new Date(pedido.fecha ?? Date.now());
+            const anio = fecha.getUTCFullYear();
+            const mes = fecha.getUTCMonth() + 1;
+            const monto = Number(pedido.total ?? 0);
+            if (!pedido.farmer_email || monto <= 0) return;
+            const { error } = await this.db.getClient().rpc("add_beneficio_mensual", {
+                p_farmer_email: pedido.farmer_email,
+                p_anio: anio,
+                p_mes: mes,
+                p_monto: monto,
+            });
+            if (error) {
+                console.error("[beneficio_mensual] error acumulando:", error.message);
+            }
+        } catch (err) {
+            console.error("[beneficio_mensual] excepción acumulando:", err);
+        }
+    }
+
+    async getBeneficiosByFarmer(email: string) {
+        const { data } = await this.db.getClient()
+            .from("beneficio_mensual")
+            .select("*")
+            .eq("farmer_email", email)
+            .order("anio", { ascending: false })
+            .order("mes", { ascending: false });
+        return data ?? [];
     }
 }

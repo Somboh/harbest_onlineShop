@@ -31,17 +31,27 @@ const previewImages = {
   Especias: require("../../assets/images/comida/pimenton.jpg"),
 };
 
-export default function AddProductScreen({ navigation }) {
+export default function AddProductScreen({ navigation, route }) {
   const { user } = useAuth();
 
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("Verduras");
-  const [description, setDescription] = useState("");
-  const [stock, setStock] = useState("");
-  const [price, setPrice] = useState("");
-  const [unit, setUnit] = useState("kg");
+  const isEdit = route?.params?.mode === "edit";
+  const editingId = route?.params?.productId ?? null;
+  const prefill = route?.params?.prefill ?? null;
+
+  const [name, setName] = useState(prefill?.nombre ?? "");
+  const [category, setCategory] = useState(
+    categoryOptions.find((c) => c.id === prefill?.categoria)?.id ?? "Verduras",
+  );
+  const [description, setDescription] = useState(prefill?.descripcion ?? "");
+  const [stock, setStock] = useState(
+    prefill?.cantidad != null ? String(prefill.cantidad) : "",
+  );
+  const [price, setPrice] = useState(
+    prefill?.precio != null ? String(prefill.precio) : "",
+  );
+  const [unit, setUnit] = useState(prefill?.unit || "kg");
   const [photo, setPhoto] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(prefill?.imageUri ?? null);
   const [errorMessage, setErrorMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -127,7 +137,6 @@ export default function AddProductScreen({ navigation }) {
 
     setSubmitting(true);
     try {
-      const foto = await buildFotoForUpload();
       const productData = {
         nombre: name.trim(),
         descripcion: description.trim() || name.trim(),
@@ -137,15 +146,25 @@ export default function AddProductScreen({ navigation }) {
         categoria: category,
         valoracion: 0,
       };
-      const res = await productsService.createProduct(productData, foto);
+
+      let res;
+      if (isEdit && editingId) {
+        //En edición la foto solo se sube si el agricultor eligió una nueva.
+        //Si no, conservamos la imagen original que ya está en la BD.
+        res = await productsService.updateProduct(editingId, productData, photo);
+      } else {
+        const foto = await buildFotoForUpload();
+        res = await productsService.createProduct(productData, foto);
+      }
+
       if (res?.status === "OK") {
         navigation.navigate("ProductosAgricultor", { category: "Todos" });
       } else {
-        setErrorMessage(res?.message ?? "No se pudo crear el producto.");
+        setErrorMessage(res?.message ?? "No se pudo guardar el producto.");
       }
     } catch (error) {
-      console.error("Error creando producto:", error);
-      setErrorMessage(error?.message ?? "No se pudo crear el producto.");
+      console.error("Error guardando producto:", error);
+      setErrorMessage(error?.message ?? "No se pudo guardar el producto.");
     } finally {
       setSubmitting(false);
     }
@@ -169,7 +188,9 @@ export default function AddProductScreen({ navigation }) {
                 activeOpacity={0.85}
               >
                 <Ionicons name="arrow-back" size={22} color={theme.text} />
-                <Text style={styles.headerText}>Anadir nuevo producto</Text>
+                <Text style={styles.headerText}>
+                  {isEdit ? "Editar producto" : "Anadir nuevo producto"}
+                </Text>
               </TouchableOpacity>
 
               <View style={styles.headerRight}>
@@ -372,7 +393,9 @@ export default function AddProductScreen({ navigation }) {
           <View style={styles.bottomBar}>
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={() => navigation.navigate("HomeAgricultor")}
+              onPress={() =>
+                isEdit ? navigation.goBack() : navigation.navigate("HomeAgricultor")
+              }
               activeOpacity={0.85}
               disabled={submitting}
             >
@@ -394,7 +417,11 @@ export default function AddProductScreen({ navigation }) {
                 <Ionicons name="checkmark" size={18} color="#fff" />
               )}
               <Text style={styles.saveButtonText}>
-                {submitting ? "Guardando..." : "Guardar"}
+                {submitting
+                  ? "Guardando..."
+                  : isEdit
+                    ? "Actualizar"
+                    : "Guardar"}
               </Text>
             </TouchableOpacity>
           </View>

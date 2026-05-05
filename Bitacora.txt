@@ -27,3 +27,6 @@ Cuando se de a Aceptar, que sea Enviar o Cancelar. (con actualizaciones en BD pa
 
 -
 
+
+
+

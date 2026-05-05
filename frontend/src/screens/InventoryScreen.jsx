@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -8,64 +9,136 @@ import {
   TextInput,
   Image,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import ScreenContainer from "../components/common/ScreenContainer";
 import FarmerTabBar from "../components/common/FarmerTabBar";
-import { mockProducts } from "../data/mockProducts";
+import { useAuth } from "../context/AuthContext";
+import { hydrateProducts } from "../data/productAdapter";
+import productsService from "../services/productsService";
 import { useResponsive } from "../hooks/useResponsive";
 import { ROLE_THEMES } from "../styles/roleThemes";
 
+const LOW_STOCK_THRESHOLD = 15;
+
+const getStatus = (stock) => {
+  if (stock <= 0) return "Agotado";
+  if (stock <= LOW_STOCK_THRESHOLD) return "Stock bajo";
+  return "Disponible";
+};
+
+const FILTERS = ["Todos", "Disponibles", "Stock bajo", "Agotados"];
+
 export default function InventoryScreen({ navigation }) {
+  const { user } = useAuth();
   const { isDesktop, isTablet } = useResponsive();
   const wide = isDesktop || isTablet;
-  // <-- RENOMBRADO PARA QUE COINCIDA CON EL STACK
-  const inventory = [
-    {
-      id: "1",
-      name: "Tomate raff",
-      category: "Hortalizas",
-      stock: 48,
-      unit: "kg",
-      status: "Disponible",
-      image: mockProducts[0].image,
-    },
-    {
-      id: "2",
-      name: "Calabacín",
-      category: "Hortalizas",
-      stock: 12,
-      unit: "kg",
-      status: "Stock bajo",
-      image: require("../../assets/images/comida/calabacin.jpg"),
-    },
-    {
-      id: "3",
-      name: "Naranjas",
-      category: "Frutas",
-      stock: 86,
-      unit: "kg",
-      status: "Disponible",
-      image: require("../../assets/images/comida/naranjas.jpg"),
-    },
-    {
-      id: "4",
-      name: "Lechuga romana",
-      category: "Verduras",
-      stock: 0,
-      unit: "uds",
-      status: "Agotado",
-      image: require("../../assets/images/comida/lechuga.jpg"),
-    },
-    {
-      id: "5",
-      name: "Pimiento rojo",
-      category: "Hortalizas",
-      stock: 19,
-      unit: "kg",
-      status: "Stock bajo",
-      image: require("../../assets/images/comida/pimiento.jpg"),
-    },
-  ];
+
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("Todos");
+  const [actionId, setActionId] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const loadProducts = React.useCallback(async () => {
+    if (!user?.email) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const raw = await productsService.getProductsByFarmer(user.email);
+      setProducts(hydrateProducts(raw));
+      setErrorMessage("");
+    } catch (err) {
+      console.error("Error cargando inventario:", err);
+      setErrorMessage("No se pudo cargar el inventario.");
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.email]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        await loadProducts();
+        if (cancelled) return;
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [loadProducts]),
+  );
+
+  const inventory = useMemo(() => {
+    return products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      category: p.category || "Sin categoría",
+      stock: p.stock ?? 0,
+      stockMax: p.stockMax ?? p.stock ?? 0,
+      unit: p.unit || "kg",
+      status: getStatus(p.stock ?? 0),
+      image: p.image,
+    }));
+  }, [products]);
+
+  const filteredInventory = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return inventory.filter((item) => {
+      if (q && !item.name.toLowerCase().includes(q)) return false;
+      if (filter === "Disponibles" && item.status !== "Disponible") return false;
+      if (filter === "Stock bajo" && item.status !== "Stock bajo") return false;
+      if (filter === "Agotados" && item.status !== "Agotado") return false;
+      return true;
+    });
+  }, [inventory, search, filter]);
+
+  const stats = useMemo(() => {
+    const total = inventory.length;
+    const low = inventory.filter((i) => i.status === "Stock bajo").length;
+    const out = inventory.filter((i) => i.status === "Agotado").length;
+    return { total, low, out };
+  }, [inventory]);
+
+  const handleReponer = async (id) => {
+    setActionId(id);
+    setErrorMessage("");
+    try {
+      const res = await productsService.reponerProduct(id);
+      if (res?.status !== "OK") {
+        setErrorMessage(res?.message ?? "No se pudo reponer.");
+      }
+      await loadProducts();
+    } catch (err) {
+      console.error("Error reponiendo:", err);
+      setErrorMessage(err?.message ?? "No se pudo reponer.");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleEdit = (item) => {
+    const original = products.find((p) => p.id === item.id);
+    navigation.navigate("AddProduct", {
+      mode: "edit",
+      productId: item.id,
+      prefill: original
+        ? {
+            nombre: original.name,
+            categoria: original.category,
+            descripcion: original.description,
+            precio: original.price,
+            cantidad: original.stock,
+            unit: original.unit,
+            imageUri: original.image?.uri ?? null,
+          }
+        : null,
+    });
+  };
 
   return (
     <ScreenContainer>
@@ -111,7 +184,7 @@ export default function InventoryScreen({ navigation }) {
                 size={20}
                 color={theme.secondary}
               />
-              <Text style={styles.statNumber}>52</Text>
+              <Text style={styles.statNumber}>{stats.total}</Text>
               <Text style={styles.statLabel}>Productos</Text>
             </View>
 
@@ -121,7 +194,7 @@ export default function InventoryScreen({ navigation }) {
                 size={20}
                 color={theme.secondary}
               />
-              <Text style={styles.statNumber}>8</Text>
+              <Text style={styles.statNumber}>{stats.low}</Text>
               <Text style={styles.statLabel}>Stock bajo</Text>
             </View>
 
@@ -131,7 +204,7 @@ export default function InventoryScreen({ navigation }) {
                 size={20}
                 color={theme.secondary}
               />
-              <Text style={styles.statNumber}>3</Text>
+              <Text style={styles.statNumber}>{stats.out}</Text>
               <Text style={styles.statLabel}>Agotados</Text>
             </View>
           </View>
@@ -143,91 +216,176 @@ export default function InventoryScreen({ navigation }) {
               placeholder="Buscar producto"
               placeholderTextColor={theme.textSoft}
               style={styles.searchInput}
+              value={search}
+              onChangeText={setSearch}
             />
           </View>
 
           {/* FILTROS */}
           <View style={styles.filterRow}>
-            <TouchableOpacity
-              style={[styles.filterChip, styles.filterChipActive]}
-            >
-              <Text style={[styles.filterText, styles.filterTextActive]}>
-                Todos
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.filterChip}>
-              <Text style={styles.filterText}>Disponibles</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.filterChip}>
-              <Text style={styles.filterText}>Stock bajo</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.filterChip}>
-              <Text style={styles.filterText}>Agotados</Text>
-            </TouchableOpacity>
+            {FILTERS.map((label) => {
+              const active = filter === label;
+              return (
+                <TouchableOpacity
+                  key={label}
+                  style={[styles.filterChip, active && styles.filterChipActive]}
+                  onPress={() => setFilter(label)}
+                  activeOpacity={0.85}
+                >
+                  <Text
+                    style={[styles.filterText, active && styles.filterTextActive]}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
+
+          {errorMessage ? (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={18} color="#B3533D" />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          ) : null}
 
           {/* LISTADO */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tus productos</Text>
 
-            <View style={wide ? styles.inventoryGridWide : null}>
-            {inventory.map((item) => (
-              <View key={item.id} style={[styles.productCard, wide && styles.productCardWide]}>
-                <View style={styles.productTopRow}>
-                  <Image source={item.image} style={styles.productImage} />
-
-                  <View style={styles.productMainInfo}>
-                    <Text style={styles.productName}>{item.name}</Text>
-                    <Text style={styles.productCategory}>{item.category}</Text>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      getStatusBadgeStyle(item.status),
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statusText,
-                        getStatusTextStyle(item.status),
-                      ]}
-                    >
-                      {item.status}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.stockRow}>
-                  <View>
-                    <Text style={styles.stockLabel}>Stock actual</Text>
-                    <Text style={styles.stockValue}>
-                      {item.stock} {item.unit}
-                    </Text>
-                  </View>
-
-                  <View style={styles.actionButtons}>
-                    <TouchableOpacity
-                      style={styles.secondaryButton}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.secondaryButtonText}>Editar</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.primaryButton}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.primaryButtonText}>Reponer</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+            {loading ? (
+              <View style={styles.loadingBox}>
+                <ActivityIndicator color={theme.primary} />
               </View>
-            ))}
-            </View>
+            ) : filteredInventory.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Ionicons
+                  name="basket-outline"
+                  size={28}
+                  color={theme.textSoft}
+                />
+                <Text style={styles.emptyTitle}>Sin productos</Text>
+                <Text style={styles.emptySubtitle}>
+                  {products.length === 0
+                    ? "Aún no has creado ningún producto."
+                    : "Ningún producto coincide con los filtros."}
+                </Text>
+                {products.length === 0 ? (
+                  <TouchableOpacity
+                    style={styles.emptyButton}
+                    onPress={() => navigation.navigate("AddProduct")}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="add-circle" size={18} color="#fff" />
+                    <Text style={styles.emptyButtonText}>Añadir producto</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : (
+              <View style={wide ? styles.inventoryGridWide : null}>
+                {filteredInventory.map((item) => {
+                  const isWorking = actionId === item.id;
+                  const canRefill = item.stockMax > item.stock;
+                  return (
+                    <View
+                      key={item.id}
+                      style={[styles.productCard, wide && styles.productCardWide]}
+                    >
+                      <View style={styles.productTopRow}>
+                        {item.image ? (
+                          <Image
+                            source={item.image}
+                            style={styles.productImage}
+                          />
+                        ) : (
+                          <View
+                            style={[
+                              styles.productImage,
+                              styles.productImageEmpty,
+                            ]}
+                          >
+                            <Ionicons
+                              name="leaf"
+                              size={20}
+                              color={theme.primary}
+                            />
+                          </View>
+                        )}
+
+                        <View style={styles.productMainInfo}>
+                          <Text style={styles.productName}>{item.name}</Text>
+                          <Text style={styles.productCategory}>
+                            {item.category}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            getStatusBadgeStyle(item.status),
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.statusText,
+                              getStatusTextStyle(item.status),
+                            ]}
+                          >
+                            {item.status}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.stockRow}>
+                        <View>
+                          <Text style={styles.stockLabel}>Stock actual</Text>
+                          <Text style={styles.stockValue}>
+                            {item.stock} {item.unit}
+                          </Text>
+                          {item.stockMax > 0 ? (
+                            <Text style={styles.stockMaxLabel}>
+                              Lleno: {item.stockMax} {item.unit}
+                            </Text>
+                          ) : null}
+                        </View>
+
+                        <View style={styles.actionButtons}>
+                          <TouchableOpacity
+                            style={styles.secondaryButton}
+                            activeOpacity={0.85}
+                            onPress={() => handleEdit(item)}
+                            disabled={isWorking}
+                          >
+                            <Text style={styles.secondaryButtonText}>
+                              Editar
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={[
+                              styles.primaryButton,
+                              (!canRefill || isWorking) &&
+                                styles.primaryButtonDisabled,
+                            ]}
+                            activeOpacity={0.85}
+                            onPress={() => handleReponer(item.id)}
+                            disabled={!canRefill || isWorking}
+                          >
+                            {isWorking ? (
+                              <ActivityIndicator color="#fff" size="small" />
+                            ) : (
+                              <Text style={styles.primaryButtonText}>
+                                Reponer
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
         </ScrollView>
 
@@ -470,6 +628,87 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     resizeMode: "cover",
     marginRight: 12,
+  },
+
+  productImageEmpty: {
+    backgroundColor: theme.secondarySoft,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  stockMaxLabel: {
+    fontSize: 11,
+    color: theme.textSoft,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+
+  loadingBox: {
+    paddingVertical: 32,
+    alignItems: "center",
+  },
+
+  emptyCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 24,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: theme.textDark,
+    marginTop: 10,
+  },
+
+  emptySubtitle: {
+    fontSize: 12,
+    color: theme.textSoft,
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 12,
+  },
+
+  emptyButton: {
+    flexDirection: "row",
+    backgroundColor: theme.secondary,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    alignItems: "center",
+    gap: 8,
+  },
+
+  emptyButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FBE9E5",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 14,
+    gap: 8,
+  },
+
+  errorText: {
+    flex: 1,
+    color: "#8C2A1A",
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+
+  primaryButtonDisabled: {
+    opacity: 0.5,
   },
 
   productMainInfo: {

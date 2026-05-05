@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
@@ -7,19 +9,58 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
 import FarmerTabBar from "../components/common/FarmerTabBar";
 import ScreenContainer from "../components/common/ScreenContainer";
 import PendingOrdersBanner from "../components/orders/PendingOrdersBanner";
+import { useAuth } from "../context/AuthContext";
 import { useDisplaySettings } from "../context/DisplaySettingsContext";
-import { mockProducts } from "../data/mockProducts";
+import { hydrateProducts } from "../data/productAdapter";
+import productsService from "../services/productsService";
 import { getDisplayMode } from "../styles/displayModes";
 import { ROLE_THEMES } from "../styles/roleThemes";
 
 export default function HomeAgricultorScreen({ navigation }) {
+  const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const display = getDisplayMode(settings, ROLE_THEMES.farmer);
-  const latestProducts = mockProducts.slice(0, 3);
+
+  const [latestProducts, setLatestProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  //Pedimos los productos del agricultor cada vez que la pantalla recibe foco,
+  //así un alta en AddProduct o un borrado en ProductDetailFarmer se reflejan
+  //al volver. No tenemos created_at en BD, pero asumimos que Supabase
+  //devuelve en orden de inserción y mostramos los últimos 3.
+  useFocusEffect(
+    React.useCallback(() => {
+      let cancelled = false;
+      const email = user?.email;
+      if (!email) {
+        setLatestProducts([]);
+        setLoadingProducts(false);
+        return undefined;
+      }
+      setLoadingProducts(true);
+      (async () => {
+        try {
+          const raw = await productsService.getProductsByFarmer(email);
+          if (cancelled) return;
+          const hydrated = hydrateProducts(raw);
+          setLatestProducts(hydrated.slice(-3).reverse());
+        } catch (err) {
+          console.error("Error cargando productos del agricultor:", err);
+          if (!cancelled) setLatestProducts([]);
+        } finally {
+          if (!cancelled) setLoadingProducts(false);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [user?.email]),
+  );
 
   return (
     <ScreenContainer>
@@ -178,14 +219,45 @@ export default function HomeAgricultorScreen({ navigation }) {
           </View>
 
           <View style={styles.productList}>
-            {latestProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                display={display}
-                onPress={() => navigation.navigate("Inventory")}
-              />
-            ))}
+            {loadingProducts ? (
+              <View style={styles.loadingBox}>
+                <ActivityIndicator color={display.primary} />
+              </View>
+            ) : latestProducts.length === 0 ? (
+              <TouchableOpacity
+                style={[
+                  styles.emptyCard,
+                  {
+                    backgroundColor: display.surface,
+                    borderColor: display.border,
+                  },
+                ]}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate("AddProduct")}
+              >
+                <Ionicons
+                  name="add-circle-outline"
+                  size={22}
+                  color={display.primary}
+                />
+                <Text style={[styles.emptyText, { color: display.text }]}>
+                  Aún no tienes productos. Pulsa para añadir el primero.
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              latestProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  display={display}
+                  onPress={() =>
+                    navigation.navigate("ProductDetailFarmer", {
+                      productId: product.id,
+                    })
+                  }
+                />
+              ))
+            )}
           </View>
         </ScrollView>
 
@@ -220,7 +292,19 @@ const ProductCard = ({ product, display, onPress }) => (
     onPress={onPress}
     activeOpacity={0.86}
   >
-    <Image source={product.image} style={styles.cardImage} />
+    {product.image ? (
+      <Image source={product.image} style={styles.cardImage} />
+    ) : (
+      <View
+        style={[
+          styles.cardImage,
+          styles.cardImageEmpty,
+          { backgroundColor: display.primarySoft },
+        ]}
+      >
+        <Ionicons name="leaf" size={24} color={display.primary} />
+      </View>
+    )}
 
     <View style={styles.cardInfo}>
       <Text
@@ -230,15 +314,19 @@ const ProductCard = ({ product, display, onPress }) => (
         {product.name}
       </Text>
       <Text style={[styles.cardQty, { color: display.textSoft }]}>
-        {product.stock} {product.unit} disponibles
+        {product.stock ?? 0} {product.unit || "kg"} disponibles
       </Text>
     </View>
 
-    <View style={[styles.cardBadge, { backgroundColor: display.primarySoft }]}>
-      <Text style={[styles.cardBadgeText, { color: display.primary }]}>
-        {product.category}
-      </Text>
-    </View>
+    {product.category ? (
+      <View
+        style={[styles.cardBadge, { backgroundColor: display.primarySoft }]}
+      >
+        <Text style={[styles.cardBadgeText, { color: display.primary }]}>
+          {product.category}
+        </Text>
+      </View>
+    ) : null}
   </TouchableOpacity>
 );
 
@@ -425,6 +513,30 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     resizeMode: "cover",
     marginRight: 15,
+  },
+  cardImageEmpty: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingBox: {
+    paddingVertical: 24,
+    alignItems: "center",
+  },
+  emptyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F1D3C5",
+    gap: 10,
+  },
+  emptyText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: ROLE_THEMES.farmer.text,
   },
   cardInfo: {
     flex: 1,
