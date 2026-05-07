@@ -24,7 +24,10 @@ export const authService = {
       return resultado ?? { status: "ERROR", message: "Error desconocido" };
     } catch (error) {
       console.error("Error en el login:", error);
-      return { status: "ERROR", message: "No se pudo conectar con el servidor" };
+      return {
+        status: "ERROR",
+        message: "No se pudo conectar con el servidor",
+      };
     }
   },
 
@@ -45,7 +48,10 @@ export const authService = {
       return resultado ?? { status: "ERROR", message: "Error desconocido" };
     } catch (error) {
       console.error("Error en el login:", error);
-      return { status: "ERROR", message: "No se pudo conectar con el servidor" };
+      return {
+        status: "ERROR",
+        message: "No se pudo conectar con el servidor",
+      };
     }
   },
 
@@ -66,7 +72,10 @@ export const authService = {
       return result;
     } catch (error) {
       console.error("Error en el registro:", error);
-      return { status: "ERROR", message: "No se pudo conectar con el servidor" };
+      return {
+        status: "ERROR",
+        message: "No se pudo conectar con el servidor",
+      };
     }
   },
 
@@ -83,7 +92,10 @@ export const authService = {
       return result;
     } catch (error) {
       console.error("Error en el registro del agricultor:", error);
-      return { status: "ERROR", message: "No se pudo conectar con el servidor" };
+      return {
+        status: "ERROR",
+        message: "No se pudo conectar con el servidor",
+      };
     }
   },
 

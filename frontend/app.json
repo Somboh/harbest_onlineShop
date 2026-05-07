@@ -46,7 +46,7 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiBaseUrl": "http://localhost:3000"
+      "apiBaseUrl": "https://harbest-onlineshop.onrender.com"
     }
   }
 }
