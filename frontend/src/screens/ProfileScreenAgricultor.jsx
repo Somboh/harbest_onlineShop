@@ -1,18 +1,40 @@
-import React from "react";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { jwtDecode } from "jwt-decode";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   Image,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import ScreenContainer from "../components/common/ScreenContainer";
 import FarmerTabBar from "../components/common/FarmerTabBar";
+import ScreenContainer from "../components/common/ScreenContainer";
+import { farmerService } from "../services/farmerService";
 import { ROLE_THEMES } from "../styles/roleThemes";
 
 export default function ProfileScreenAgricultor({ navigation }) {
+  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [foto, setFoto] = useState("");
+
+  const getFarmerInfo = async () => {
+    const token = await AsyncStorage.getItem("token");
+
+    if(token){
+      const decodedToken = jwtDecode(token);
+
+      const res = await farmerService.getFarmerByEmail(decodedToken.email);
+      setNombre(res.nombre);
+      setEmail(res.email);
+      setFoto(res.foto);
+    }
+  }
+  useEffect(()=>{
+    getFarmerInfo();
+  },[])
   return (
     <ScreenContainer>
       <View style={styles.container}>
@@ -59,13 +81,13 @@ export default function ProfileScreenAgricultor({ navigation }) {
           {/* TARJETA PERFIL */}
           <View style={styles.profileCard}>
             <Image
-              source={require("../../assets/images/agri.jpg")}
+              source={foto}
               style={styles.avatarImage}
             />
 
             <View style={styles.profileInfo}>
-              <Text style={styles.username}>EcoCamp</Text>
-              <Text style={styles.email}>ecocamp@harbest.ua.es</Text>
+              <Text style={styles.username}>{nombre}</Text>
+              <Text style={styles.email}>{email}</Text>
 
               <View style={styles.badge}>
                 <MaterialCommunityIcons

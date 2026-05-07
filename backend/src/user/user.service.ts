@@ -92,15 +92,32 @@ export class UserService {
   }
   //Devuelve el usuario actual (a partir del id del JWT) sin la contraseña.
   async getMe(userId: string){
+    let res = {
+      id: "",
+      nombre: "",
+      email: "",
+      foto: "",
+    };
     const {data, error} = await this.db.getClient()
       .from("usuario")
       .select("id, nombre, email, foto")
       .eq("id", userId)
       .single();
+      
+    res.nombre = data?.nombre || "";
+    res.email = data?.email || "";
+    res.id = data?.id || "";
     if(error || !data){
       throw new Error("Usuario no encontrado");
     }
-    return data;
+
+    const {data:fotoData, error:fotoError} = await this.db.getClient()
+      .from("fotos")
+      .select("path")
+      .eq("id", data?.foto)
+      .single();
+    res.foto = fotoData?.path || "";
+    return res;
   }
 
   //Actualiza nombre y email. NO toca la contraseña ni la foto: para eso

@@ -22,7 +22,9 @@ import productsService from "../services/productsService";
 import { hydrateProducts } from "../data/productAdapter";
 import { getDisplayMode } from "../styles/displayModes";
 import { ROLE_THEMES } from "../styles/roleThemes";
-
+import { jwtDecode } from "jwt-decode";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import userService from "../services/userService";
 export default function HomeScreen({ navigation }) {
   const { settings } = useDisplaySettings();
   const display = getDisplayMode(settings, ROLE_THEMES.user);
@@ -38,6 +40,12 @@ export default function HomeScreen({ navigation }) {
   const trimmed = searchText.trim();
   const isSearching = trimmed.length > 0;
 
+  const [nombre, setNombre] = useState("");
+
+  const getName = async () => {
+    const me = await userService.getMe();
+    setNombre(me.nombre);
+  }
   //Recomendados: solo lo que devuelva el backend (máx 6).
   useEffect(() => {
     let cancelled = false;
@@ -91,6 +99,9 @@ export default function HomeScreen({ navigation }) {
     };
   }, [trimmed, isSearching]);
 
+  useEffect(()=>{
+    getName();
+  },[])
   return (
     <ScreenContainer>
       <View style={[styles.container, { backgroundColor: display.background }]}>
@@ -102,7 +113,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.header}>
             <View style={styles.headerTextBlock}>
               <Text style={[styles.headerMini, { color: display.textSoft }]}>Bienvenido de nuevo</Text>
-              <Text style={[styles.title, { color: display.text }]}>Hola, Pepe</Text>
+              <Text style={[styles.title, { color: display.text }]}>Hola, {nombre}</Text>
             </View>
 
             <View style={styles.headerActions}>

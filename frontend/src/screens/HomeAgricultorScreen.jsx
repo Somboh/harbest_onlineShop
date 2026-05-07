@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -20,6 +20,8 @@ import { hydrateProducts } from "../data/productAdapter";
 import productsService from "../services/productsService";
 import { getDisplayMode } from "../styles/displayModes";
 import { ROLE_THEMES } from "../styles/roleThemes";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { jwtDecode } from "jwt-decode";
 
 export default function HomeAgricultorScreen({ navigation }) {
   const { user } = useAuth();
