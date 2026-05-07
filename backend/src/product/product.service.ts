@@ -4,13 +4,37 @@ import { randomString } from 'src/Global';
 import * as fs from 'fs/promises';
 import { DatabaseService } from "src/database/database.service";
 import { CloudinaryService } from "src/Cloudinary/cloudinary.service";
-//Aplana cada fila producto+fotos en un objeto con foto_url plana, así el
-//frontend puede consumirlo sin saber del join.
-function flattenWithPhoto(rows: any[] | null) {
+
+//Aplana cada fila producto+producto_fotos+fotos en un objeto con
+//foto_url (la principal) y foto_urls (todas en orden), de forma que el
+//frontend pueda mostrar tanto la miniatura en tarjetas como el carrusel
+//en el detalle sin saber del join.
+function flattenWithPhotos(rows: any[] | null) {
     return (rows ?? []).map((row) => {
-        const { fotos, ...rest } = row ?? {};
-        return { ...rest, foto_url: fotos?.path ?? null };
+        const { producto_fotos, ...rest } = row ?? {};
+        const ordered = (producto_fotos ?? [])
+            .slice()
+            .sort((a: any, b: any) => (a?.orden ?? 0) - (b?.orden ?? 0))
+            .map((pf: any) => pf?.fotos?.path)
+            .filter((p: string | null | undefined): p is string => !!p);
+        return {
+            ...rest,
+            foto_url: ordered[0] ?? null,
+            foto_urls: ordered,
+        };
     });
+}
+
+const SELECT_WITH_FOTOS = "*, producto_fotos(orden, fotos(id, path))";
+
+//Borra del disco local los archivos temporales que multer guardó. Nunca lanza:
+//si fs.unlink falla solo lo logueamos para no enmascarar el error de negocio.
+async function cleanupLocal(files: Express.Multer.File[]) {
+    await Promise.all((files ?? []).map(async (f) => {
+        if (!f?.path) return;
+        try { await fs.unlink(f.path); }
+        catch (err) { console.error("Error al borrar archivo local:", f.path, err); }
+    }));
 }
 
 @Injectable()
@@ -20,43 +44,66 @@ export class ProductService {
     async getAllProducts(){
         const {data} = await this.db.getClient()
             .from("producto")
-            .select("*, fotos:foto(path)");
-        return flattenWithPhoto(data);
+            .select(SELECT_WITH_FOTOS);
+        return flattenWithPhotos(data);
     }
 
     async getProductById(id: string){
         const {data} = await this.db.getClient()
             .from("producto")
-            .select("*, fotos:foto(path)")
+            .select(SELECT_WITH_FOTOS)
             .eq("id", id);
-        return flattenWithPhoto(data);
+        return flattenWithPhotos(data);
     }
 
     async getProductsByFarmer(farmerId: string){
         const {data} = await this.db.getClient()
             .from("producto")
-            .select("*, fotos:foto(path)")
+            .select(SELECT_WITH_FOTOS)
             .eq("email_agricultor", farmerId);
-        return flattenWithPhoto(data);
+        return flattenWithPhotos(data);
     }
 
-    async createProduct(product: Product, foto: Express.Multer.File) {
-        try {
-            const resFoto = await this.cloudinaryService.uploadImage(foto.path);
-            if (!resFoto || resFoto.error) {
-                throw new Error("Error al subir la imagen");
-            }
-    
-            //se inserta la foto en la tabla fotos
-            await this.db.getClient().from("fotos").insert({id: resFoto.public_id, path: resFoto.secure_url});
-    
-            //una vez guardada la foto se almacena el producto (ya que foto en producto es una clave ajena)
-            const id = randomString();
+    /*
+        Sube cada archivo a Cloudinary, registra cada uno en la tabla `fotos`
+        y crea las filas correspondientes en `producto_fotos` con el orden
+        recibido del frontend (índice del array). En cualquier fallo se hace
+        rollback: se borran de Cloudinary los archivos ya subidos, las filas
+        ya insertadas y, si llegamos a crear el producto, se elimina también.
+    */
+    async createProduct(product: Product, fotos: Express.Multer.File[]) {
+        if(!fotos || fotos.length === 0){
+            return {status: "ERROR", message: "Debes subir al menos una foto del producto"};
+        }
 
-            const { error:errorProduct } = await this.db.getClient().from("producto").insert({
+        const uploadedPublicIds: string[] = [];
+        let productoCreado = false;
+        const id = randomString();
+
+        try {
+            //1) Subir todas las fotos a Cloudinary
+            const uploads = [] as { public_id: string, secure_url: string }[];
+            for (const file of fotos) {
+                const res = await this.cloudinaryService.uploadImage(file.path);
+                if (!res || (res as any).error) {
+                    throw new Error("Error al subir la imagen a Cloudinary");
+                }
+                uploadedPublicIds.push(res.public_id);
+                uploads.push({ public_id: res.public_id, secure_url: res.secure_url });
+            }
+
+            //2) Insertar las filas en la tabla `fotos`
+            const { error: errorFotos } = await this.db.getClient()
+                .from("fotos")
+                .insert(uploads.map(u => ({ id: u.public_id, path: u.secure_url })));
+            if (errorFotos) {
+                throw new Error("Error al insertar las fotos en la base de datos: " + errorFotos.message);
+            }
+
+            //3) Insertar el producto
+            const { error: errorProduct } = await this.db.getClient().from("producto").insert({
                 id,
                 nombre: product.nombre,
-                foto: resFoto.public_id,
                 descripcion: product.descripcion,
                 precio: product.precio,
                 cantidad: product.cantidad,
@@ -67,29 +114,55 @@ export class ProductService {
                 categoria: product.categoria,
                 valoracion: 0,
             });
-    
-            if(errorProduct){
-                await this.cloudinaryService.deleteImage(resFoto.public_id); //elimino la imagen de cloudinary si hay un error al insertar el producto en la base de datos
-                await this.db.getClient().from("fotos").delete().eq("id", resFoto.public_id); //elimino la foto de la tabla fotos si hay un error al insertar el producto en la base de datos
-                await fs.unlink(foto.path); //elimino la foto del servidor local una vez subida a cloudinary
-                return {status: "ERROR", message: "Error al crear el producto: " + errorProduct.message};
+            if (errorProduct) {
+                throw new Error("Error al crear el producto: " + errorProduct.message);
             }
-            //se borra la imagen del servidor local una vez subida a cloudinary
-            await fs.unlink(foto.path);
-        }
-        catch(error){
-            if(foto && foto.path){
-                await fs.unlink(foto.path).catch(err => console.error("Error al borrar la imagen local:", err));
+            productoCreado = true;
+
+            //4) Enlazar las fotos al producto en producto_fotos con su orden
+            const { error: errorLink } = await this.db.getClient()
+                .from("producto_fotos")
+                .insert(uploads.map((u, idx) => ({
+                    producto_id: id,
+                    foto_id: u.public_id,
+                    orden: idx,
+                })));
+            if (errorLink) {
+                throw new Error("Error al enlazar las fotos al producto: " + errorLink.message);
             }
-            throw error;
+
+            await cleanupLocal(fotos);
+            return {status: "OK", message: "Producto creado"};
         }
-        return {status: "OK", message:"Producto creado"};
+        catch (error) {
+            //Rollback en orden inverso al que se hizo el progreso.
+            if (productoCreado) {
+                await this.db.getClient().from("producto").delete().eq("id", id)
+                    .then(({ error: e }) => { if (e) console.error("Rollback producto:", e); });
+            }
+            if (uploadedPublicIds.length > 0) {
+                await this.db.getClient().from("fotos").delete().in("id", uploadedPublicIds)
+                    .then(({ error: e }) => { if (e) console.error("Rollback fotos DB:", e); });
+                for (const pid of uploadedPublicIds) {
+                    await this.cloudinaryService.deleteImage(pid).catch(err => console.error("Rollback Cloudinary:", pid, err));
+                }
+            }
+            await cleanupLocal(fotos);
+            return {status: "ERROR", message: error?.message ?? "Error al crear el producto"};
+        }
     }
 
-    async updateProduct(id: string, product: Product,foto?: Express.Multer.File){
-        //obtener el producto de la BD, para comprobar si existe el producto a actualizar y para obtener la foto antigua en caso de que se suba una nueva imagen
-        const {data,error} = await this.db.getClient().from("producto").select("*").eq("id", id).single();
-        if(error || !data){
+    /*
+        Si llega un array de fotos no vacío, se reemplazan TODAS las fotos
+        del producto por las nuevas. Si llega vacío, solo se actualizan los
+        campos del producto y las fotos existentes se quedan como están.
+        Esto coincide con la UX del agricultor: o no toca las fotos o las
+        cambia todas.
+    */
+    async updateProduct(id: string, product: Product, fotos: Express.Multer.File[] = []){
+        const {data, error} = await this.db.getClient().from("producto").select("*").eq("id", id).single();
+        if (error || !data) {
+            await cleanupLocal(fotos);
             throw new Error("Producto no encontrado");
         }
 
@@ -101,83 +174,110 @@ export class ProductService {
             Number(product.cantidad ?? 0),
         );
 
-        //si se ha subido una nueva imagen, hay que actualizar la foto del producto junto al resto de datos
-        if(foto){
-            //saco de la BD la foto antigua para borrarla de cloudinary
-            const {data:fotoBD,error:fotoError} = await this.db.getClient().from("fotos").select("*").eq("id", data.foto).single();
+        const productFields = {
+            nombre: product.nombre,
+            descripcion: product.descripcion,
+            precio: product.precio,
+            cantidad: product.cantidad,
+            cantidad_inicial: nuevaCantidadInicial,
+            email_agricultor: product.email_agricultor,
+            categoria: product.categoria,
+            valoracion: product.valoracion,
+        };
 
-            if(fotoError || !fotoBD || fotoBD.length === 0){
-                throw new Error("Foto no encontrada");
+        if (fotos.length === 0) {
+            const { error: productError } = await this.db.getClient()
+                .from("producto").update(productFields).eq("id", id);
+            if (productError) {
+                throw new Error("Error al actualizar el producto: " + productError.message);
             }
-
-            try {
-                await this.cloudinaryService.deleteImage(fotoBD.id)
-            } catch (error) {
-                if(foto && foto.path){
-                    await fs.unlink(foto.path).catch(err => console.error("Error al borrar la imagen local:", err));
-                }
-
-                throw new Error("Error al borrar la imagen antigua de cloudinary: " + error.message);
-            }
-
-            let resFoto;
-            try {
-                resFoto = await this.cloudinaryService.uploadImage(foto.path);
-            } catch (error) {
-                if(foto && foto.path){
-                    await fs.unlink(foto.path).catch(err => console.error("Error al borrar la imagen local:", err));
-                }
-                throw new Error("Error al subir la nueva imagen a cloudinary: " + error.message);
-            }
-
-            try {
-                const { error: fotoErrorUpdate } = await this.db.getClient().from("fotos").update({ path: resFoto.secure_url, id: resFoto.public_id }).eq("id", data.foto);
-                const { error: productError } = await this.db.getClient().from("producto").update({
-                    nombre: product.nombre,
-                    foto: resFoto.public_id,
-                    descripcion: product.descripcion,
-                    precio: product.precio,
-                    cantidad: product.cantidad,
-                    cantidad_inicial: nuevaCantidadInicial,
-                    email_agricultor: product.email_agricultor,
-                    categoria: product.categoria,
-                    valoracion: product.valoracion,
-                }).eq("id", id);
-                //se borra la imagen del servidor local una vez subida a cloudinary
-                if(fotoErrorUpdate){
-                    await this.cloudinaryService.deleteImage(resFoto.public_id); //elimino la imagen de cloudinary si hay un error al actualizar la foto en la base de datos
-                    await fs.unlink(foto.path);
-                    throw new Error("Error al actualizar la foto en la base de datos: " + fotoErrorUpdate.message);
-                }
-                else if(productError){
-                    await this.cloudinaryService.deleteImage(resFoto.public_id); //elimino la imagen de cloudinary si hay un error al actualizar el producto en la base de datos
-                    await fs.unlink(foto.path);
-                    throw new Error("Error al actualizar el producto en la base de datos: " + productError.message);
-                }
-                await fs.unlink(foto.path);
-            } catch (error) {
-                await fs.unlink(foto.path); //elimino la foto del servidor local una vez subida a cloudinary
-                throw new Error("Error al actualizar el producto en la base de datos: " + error.message);
-            }
+            return {status: "OK", message: "Producto actualizado"};
         }
-        //en el caso de que no se haya subido una nueva imagen, solo se actualizan los datos del producto sin modificar la foto
-        else{
-            try {
-                await this.db.getClient().from("producto").update({
-                    nombre: product.nombre,
-                    descripcion: product.descripcion,
-                    precio: product.precio,
-                    cantidad: product.cantidad,
-                    cantidad_inicial: nuevaCantidadInicial,
-                    email_agricultor: product.email_agricultor,
-                    categoria: product.categoria,
-                    valoracion: product.valoracion,
-                }).eq("id", id);
-            } catch (error) {
-                throw new Error("Error al actualizar el producto en la base de datos: " + error.message);
+
+        //Reemplazo total de fotos: subimos las nuevas, las enlazamos, y solo
+        //después borramos las antiguas. Si algo falla a mitad, hacemos rollback
+        //de lo nuevo y dejamos las viejas intactas.
+        const uploadedPublicIds: string[] = [];
+        const linkedNewIds: string[] = [];
+
+        try {
+            //1) Recoger las fotos antiguas para borrarlas al final
+            const { data: oldLinks, error: oldErr } = await this.db.getClient()
+                .from("producto_fotos").select("foto_id").eq("producto_id", id);
+            if (oldErr) throw new Error("Error al leer las fotos antiguas: " + oldErr.message);
+            const oldFotoIds = (oldLinks ?? []).map((r: any) => r.foto_id);
+
+            //2) Subir las nuevas a Cloudinary
+            const uploads = [] as { public_id: string, secure_url: string }[];
+            for (const file of fotos) {
+                const res = await this.cloudinaryService.uploadImage(file.path);
+                if (!res || (res as any).error) {
+                    throw new Error("Error al subir la imagen a Cloudinary");
+                }
+                uploadedPublicIds.push(res.public_id);
+                uploads.push({ public_id: res.public_id, secure_url: res.secure_url });
             }
+
+            //3) Insertar nuevos registros en `fotos`
+            const { error: errorFotos } = await this.db.getClient()
+                .from("fotos")
+                .insert(uploads.map(u => ({ id: u.public_id, path: u.secure_url })));
+            if (errorFotos) throw new Error("Error al insertar las fotos: " + errorFotos.message);
+
+            //4) Borrar los enlaces antiguos en producto_fotos antes de insertar
+            //   los nuevos para no dejar huérfanos si algo falla
+            const { error: delLinksErr } = await this.db.getClient()
+                .from("producto_fotos").delete().eq("producto_id", id);
+            if (delLinksErr) throw new Error("Error al borrar enlaces antiguos: " + delLinksErr.message);
+
+            //5) Insertar los nuevos enlaces con su orden
+            const { error: linkErr } = await this.db.getClient()
+                .from("producto_fotos")
+                .insert(uploads.map((u, idx) => ({
+                    producto_id: id,
+                    foto_id: u.public_id,
+                    orden: idx,
+                })));
+            if (linkErr) throw new Error("Error al enlazar las nuevas fotos: " + linkErr.message);
+            linkedNewIds.push(...uploadedPublicIds);
+
+            //6) Actualizar campos del producto
+            const { error: productError } = await this.db.getClient()
+                .from("producto").update(productFields).eq("id", id);
+            if (productError) throw new Error("Error al actualizar el producto: " + productError.message);
+
+            //7) Borrar las fotos antiguas (Cloudinary + tabla fotos). En este
+            //   punto los enlaces ya no apuntan a ellas, así que es seguro.
+            if (oldFotoIds.length > 0) {
+                await this.db.getClient().from("fotos").delete().in("id", oldFotoIds)
+                    .then(({ error: e }) => { if (e) console.error("Borrado fotos antiguas DB:", e); });
+                for (const pid of oldFotoIds) {
+                    await this.cloudinaryService.deleteImage(pid)
+                        .catch(err => console.error("Borrado Cloudinary antigua:", pid, err));
+                }
+            }
+
+            await cleanupLocal(fotos);
+            return {status: "OK", message: "Producto actualizado"};
         }
-        return {status: "OK", message:"Producto actualizado"};
+        catch (err) {
+            //Rollback de lo nuevo: enlaces, filas en fotos, archivos Cloudinary.
+            if (linkedNewIds.length > 0) {
+                await this.db.getClient().from("producto_fotos")
+                    .delete().eq("producto_id", id).in("foto_id", linkedNewIds)
+                    .then(({ error: e }) => { if (e) console.error("Rollback links update:", e); });
+            }
+            if (uploadedPublicIds.length > 0) {
+                await this.db.getClient().from("fotos").delete().in("id", uploadedPublicIds)
+                    .then(({ error: e }) => { if (e) console.error("Rollback fotos DB update:", e); });
+                for (const pid of uploadedPublicIds) {
+                    await this.cloudinaryService.deleteImage(pid)
+                        .catch(error => console.error("Rollback Cloudinary update:", pid, error));
+                }
+            }
+            await cleanupLocal(fotos);
+            throw new Error("Error al actualizar el producto: " + (err?.message ?? "desconocido"));
+        }
     }
 
     //Reponer = volver a llenar el stock al valor inicial guardado al crear o
@@ -206,68 +306,65 @@ export class ProductService {
         return {status: "OK", message: "Producto repuesto", cantidad: objetivo};
     }
 
+    /*
+        Borra el producto y, en cascada, sus enlaces en producto_fotos
+        (gracias al ON DELETE CASCADE). Después limpia los archivos en
+        Cloudinary y las filas huérfanas de la tabla fotos.
+    */
     async deleteProduct(id: string){
-        /*
-            - hay que obtener el producto de la BD
-            - sacamos la url y el id de la foto para borrarla de cloudinary
-            - borramos la foto de cloudinary
-            - borramos el producto de la BD
-            - borramos la foto de la BD
-        */
-       //comprobar que el producto existe y se saca el id de la foto para borrarla de cloudinary
-       const {data,error} = await this.db.getClient().from("producto").select("*").eq("id", id).single();
-       if(error){
-           throw new Error("Error al obtener el producto: " + error.message);
-       }
-       if(!data){
-           throw new Error("Producto no encontrado");
-       }
+        const {data, error} = await this.db.getClient().from("producto").select("id").eq("id", id).single();
+        if (error) {
+            throw new Error("Error al obtener el producto: " + error.message);
+        }
+        if (!data) {
+            throw new Error("Producto no encontrado");
+        }
 
-       if(data.foto){
-            //saco de la BD la foto para borrarla de cloudinary
-            const {data:fotoBD,error:fotoError} = await this.db.getClient().from("fotos").select("*").eq("id", data.foto).single();
-            if(!fotoError && fotoBD){
-                try {
-                    await this.cloudinaryService.deleteImage(fotoBD.id)
-                } catch (error) {
-                    throw new Error("Error al borrar la imagen de cloudinary: " + error.message);
-                }
-            }
-       }
+        //Recoger los foto_id antes de borrar el producto (al borrar, las filas
+        //de producto_fotos desaparecen por cascade y perdemos la referencia).
+        const { data: links } = await this.db.getClient()
+            .from("producto_fotos").select("foto_id").eq("producto_id", id);
+        const fotoIds = (links ?? []).map((r: any) => r.foto_id);
 
-       //borramos el producto SIEMPRE (tenga foto o no) y luego la foto si existía
-       try {
-            const {error: errorDelete} = await this.db.getClient().from("producto").delete().eq("id", id);
-            if(errorDelete){
-                throw new Error("Error al borrar el producto: " + errorDelete.message);
-            }
-            if(data.foto){
-                await this.db.getClient().from("fotos").delete().eq("id", data.foto);
-            }
-       } catch (error) {
-            throw new Error("Error al borrar el producto o la foto de la base de datos: " + error.message);
-       }
-       return {status: "OK", message:"Producto eliminado"};
+        const { error: errorDelete } = await this.db.getClient().from("producto").delete().eq("id", id);
+        if (errorDelete) {
+            throw new Error("Error al borrar el producto: " + errorDelete.message);
+        }
+
+        //Borrar fotos en Cloudinary y en la tabla fotos. Si algo falla aquí
+        //solo lo logueamos: el producto ya está borrado y para el usuario
+        //la operación es un éxito.
+        for (const pid of fotoIds) {
+            await this.cloudinaryService.deleteImage(pid)
+                .catch(err => console.error("Error al borrar imagen Cloudinary:", pid, err));
+        }
+        if (fotoIds.length > 0) {
+            await this.db.getClient().from("fotos").delete().in("id", fotoIds)
+                .then(({ error: e }) => { if (e) console.error("Error al borrar fotos DB:", e); });
+        }
+
+        return {status: "OK", message: "Producto eliminado"};
     }
 
     async getProductsByCategory(categoria: string){
         const {data} = await this.db.getClient()
             .from("producto")
-            .select("*, fotos:foto(path)")
+            .select(SELECT_WITH_FOTOS)
             .eq("categoria", categoria);
-        return flattenWithPhoto(data);
+        return flattenWithPhotos(data);
     }
 
     async searchProducts(q: string){
         if(!q || q.trim().length === 0){
             return [];
         }
-        //Buscamos por nombre y traemos también la URL de la foto desde la tabla
-        //fotos para que el frontend pueda pintar la miniatura sin una segunda llamada.
+        //Buscamos por nombre y traemos también las URLs de las fotos a través
+        //de la tabla intermedia para que el frontend pueda pintar miniaturas
+        //sin una segunda llamada.
         const {data} = await this.db.getClient()
             .from("producto")
-            .select("*, fotos:foto(path)")
+            .select(SELECT_WITH_FOTOS)
             .ilike("nombre", `%${q.trim()}%`);
-        return flattenWithPhoto(data);
+        return flattenWithPhotos(data);
     }
 }

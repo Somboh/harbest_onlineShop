@@ -3,30 +3,6 @@ PABLO Y MARÍA
 - En Pedidos que salgan los pedidos pasados, y que se puedan pulsar y te lleven a una página en la que puedas ver todos los productos 
 
 
-FLUJO DE LA APLICACIÓN:
-1) EN el carrito, cambia el botón por "Continuar compra", cuando se pulse que aparezca un formulario
-para rellenar la información de envio, cuando le de a Finalizar compra (que será el botón de este formulario), 
-se guardará en la base de datos con estado Pendiente.
-
-Un usuario en una compra puede elegir varios productos de distintos agricultores
-EN la pagina de pedidos, cuando pulse uno le lleve a otra pagina para ver todos los productos y si el agricultor lo ha aceptadp
-
-Pueden pasar 3 cosas, el agricultor puede haberlo aceptado y saldría eso, cuando el agricultor le de a enviar que salga "En camino" y cuando lo haya recibido que salga "Recibido"
-
-
-2) En Agricultor tiene que haber un popup con los pedidos pedientes (que salga abjo en el menu, piensa que es para movil).
-EL agricultor le saldra un mensaje de usuario x quiere comprarte un producto. 
-La forma en la que saldrá será un box con una foto a la izquierda y a la derecha datos del producto con el nombre
-tipo "Manzanas" abajo 3kilos, abajo el precio y abajo botones medianamente grandes que se entiendan que 
-sea Rechazar, Aceptar. 
-
-Cuando se de a Aceptar, que sea Enviar o Cancelar. (con actualizaciones en BD para que el usuario pueda entender qué está pasando en su producto)
-
-3) Cuando el agricultor le ha dado a enviar y al usuario le tiene que aparecer en camino y ya (el agricultor ya no puede hacer nada)
-
-
--
-
 
 
 

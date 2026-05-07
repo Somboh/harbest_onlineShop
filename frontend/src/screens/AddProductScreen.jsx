@@ -31,6 +31,8 @@ const previewImages = {
   Especias: require("../../assets/images/comida/pimenton.jpg"),
 };
 
+const MAX_FOTOS = 5;
+
 export default function AddProductScreen({ navigation, route }) {
   const { user } = useAuth();
 
@@ -50,12 +52,28 @@ export default function AddProductScreen({ navigation, route }) {
     prefill?.precio != null ? String(prefill.precio) : "",
   );
   const [unit, setUnit] = useState(prefill?.unit || "kg");
-  const [photo, setPhoto] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(prefill?.imageUri ?? null);
+  //photos: archivos nuevos elegidos por el agricultor en esta sesión (web).
+  //photoPreviews: URIs locales (createObjectURL) para mostrar miniaturas.
+  //existingPreviews: URIs ya guardadas en el producto (sólo en modo edit).
+  //Si photos.length === 0 en modo edit, el backend mantiene las fotos
+  //existentes; si hay alguna, se reemplazan todas.
+  const initialExistingPreviews = useMemo(() => {
+    if (Array.isArray(prefill?.imageUris) && prefill.imageUris.length > 0) {
+      return prefill.imageUris.filter(Boolean);
+    }
+    return prefill?.imageUri ? [prefill.imageUri] : [];
+  }, [prefill]);
+
+  const [photos, setPhotos] = useState([]);
+  const [photoPreviews, setPhotoPreviews] = useState([]);
+  const [existingPreviews] = useState(initialExistingPreviews);
   const [errorMessage, setErrorMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const fileInputRef = useRef(null);
+  const hasNewPhotos = photos.length > 0;
+  const displayedPreviews = hasNewPhotos ? photoPreviews : existingPreviews;
+  const canAddMorePhotos = photos.length < MAX_FOTOS;
 
   const previewName = name.trim() || "Tomates de la huerta";
   const previewStock = stock.trim() || "0";
@@ -65,9 +83,10 @@ export default function AddProductScreen({ navigation, route }) {
     return name.trim() && stock.trim() && price.trim();
   }, [name, stock, price]);
 
-  //En web abrimos un <input type="file"> oculto. En nativo no hay picker
-  //instalado (no usamos expo-image-picker), así que se enviará la imagen de
-  //preview de la categoría como fallback.
+  //En web abrimos un <input type="file" multiple> oculto y permitimos
+  //seleccionar hasta MAX_FOTOS. Si selecciona más, recortamos. En nativo no
+  //hay picker (no usamos expo-image-picker), así que se enviará una imagen
+  //de preview de la categoría como fallback en modo crear.
   const handlePickPhoto = () => {
     if (Platform.OS !== "web") {
       setErrorMessage(
@@ -75,27 +94,55 @@ export default function AddProductScreen({ navigation, route }) {
       );
       return;
     }
-    if (!fileInputRef.current) {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.onchange = (event) => {
-        const file = event.target.files?.[0];
-        if (file) {
-          setPhoto(file);
-          setPhotoPreview(URL.createObjectURL(file));
-          setErrorMessage("");
-        }
-      };
-      fileInputRef.current = input;
-    }
-    fileInputRef.current.click();
+    //Recreamos el input cada vez para que el callback capture el estado
+    //actual de `photos` (los closures con un input cacheado se quedaban
+    //con la lista vacía y no podíamos añadir más fotos en clicks sucesivos).
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.multiple = true;
+    input.onchange = (event) => {
+      const files = Array.from(event.target.files ?? []);
+      if (files.length === 0) return;
+      const slotsLeft = Math.max(0, MAX_FOTOS - photos.length);
+      const accepted = files.slice(0, slotsLeft);
+      const rejected = files.length - accepted.length;
+      const newPhotos = [...photos, ...accepted];
+      const newPreviews = [
+        ...photoPreviews,
+        ...accepted.map((f) => URL.createObjectURL(f)),
+      ];
+      setPhotos(newPhotos);
+      setPhotoPreviews(newPreviews);
+      if (rejected > 0) {
+        setErrorMessage(
+          `Solo puedes subir hasta ${MAX_FOTOS} fotos. ${rejected} se ${
+            rejected === 1 ? "ha descartado" : "han descartado"
+          }.`,
+        );
+      } else {
+        setErrorMessage("");
+      }
+    };
+    fileInputRef.current = input;
+    input.click();
   };
 
-  //Si el agricultor no eligió foto, mandamos la del preview de la categoría.
-  //En web la convertimos a File; en nativo a {uri,name,type}.
+  const handleRemovePhoto = (index) => {
+    const removedPreview = photoPreviews[index];
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
+    //Liberamos el URL local del browser para no dejar referencias colgando.
+    if (Platform.OS === "web" && removedPreview && typeof URL !== "undefined" && URL.revokeObjectURL) {
+      try { URL.revokeObjectURL(removedPreview); } catch { /* noop */ }
+    }
+  };
+
+  //Fallback en modo crear cuando el agricultor no eligió ninguna foto:
+  //usamos la imagen de preview de la categoría para que el producto siempre
+  //se publique con al menos una foto. En web la convertimos a File; en
+  //nativo a {uri,name,type}.
   const buildFotoForUpload = async () => {
-    if (photo) return photo;
     const asset = Image.resolveAssetSource(previewImages[category]);
     if (Platform.OS === "web") {
       const response = await fetch(asset.uri);
@@ -149,12 +196,17 @@ export default function AddProductScreen({ navigation, route }) {
 
       let res;
       if (isEdit && editingId) {
-        //En edición la foto solo se sube si el agricultor eligió una nueva.
-        //Si no, conservamos la imagen original que ya está en la BD.
-        res = await productsService.updateProduct(editingId, productData, photo);
+        //En edición las fotos solo se envían si el agricultor eligió fotos
+        //nuevas. Si no, el backend conserva las fotos actuales del producto.
+        //Si envía nuevas, se reemplazan TODAS las anteriores.
+        res = await productsService.updateProduct(editingId, productData, photos);
       } else {
-        const foto = await buildFotoForUpload();
-        res = await productsService.createProduct(productData, foto);
+        //En creación necesitamos al menos una foto. Si el agricultor no
+        //eligió ninguna, mandamos la imagen de preview de la categoría.
+        const fotosToSend = photos.length > 0
+          ? photos
+          : [await buildFotoForUpload()];
+        res = await productsService.createProduct(productData, fotosToSend);
       }
 
       if (res?.status === "OK") {
@@ -207,8 +259,8 @@ export default function AddProductScreen({ navigation, route }) {
             <View style={styles.previewCard}>
               <Image
                 source={
-                  photoPreview
-                    ? { uri: photoPreview }
+                  displayedPreviews[0]
+                    ? { uri: displayedPreviews[0] }
                     : previewImages[category]
                 }
                 style={styles.previewImage}
@@ -222,20 +274,77 @@ export default function AddProductScreen({ navigation, route }) {
                     color={theme.primary}
                   />
                   <Text style={styles.previewBadgeText}>
-                    {photoPreview ? "Tu foto" : "Preview"}
+                    {displayedPreviews.length > 0
+                      ? `${displayedPreviews.length}/${MAX_FOTOS}`
+                      : "Preview"}
                   </Text>
                 </View>
 
                 <TouchableOpacity
-                  style={styles.photoButton}
+                  style={[
+                    styles.photoButton,
+                    !canAddMorePhotos && styles.photoButtonDisabled,
+                  ]}
                   activeOpacity={0.85}
                   onPress={handlePickPhoto}
+                  disabled={!canAddMorePhotos && hasNewPhotos}
                 >
                   <Ionicons name="image-outline" size={16} color="#fff" />
-                  <Text style={styles.photoButtonText}>Cambiar foto</Text>
+                  <Text style={styles.photoButtonText}>
+                    {hasNewPhotos ? "Añadir más" : "Añadir fotos"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.thumbsRow}
+            >
+              {displayedPreviews.map((uri, index) => (
+                <View
+                  key={`${uri}-${index}`}
+                  style={[
+                    styles.thumb,
+                    index === 0 && styles.thumbPrincipal,
+                  ]}
+                >
+                  <Image source={{ uri }} style={styles.thumbImage} />
+                  {index === 0 ? (
+                    <View style={styles.thumbBadge}>
+                      <Text style={styles.thumbBadgeText}>Principal</Text>
+                    </View>
+                  ) : null}
+                  {hasNewPhotos ? (
+                    <TouchableOpacity
+                      style={styles.thumbRemove}
+                      onPress={() => handleRemovePhoto(index)}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons name="close" size={14} color="#fff" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ))}
+
+              {hasNewPhotos && canAddMorePhotos ? (
+                <TouchableOpacity
+                  style={styles.thumbAdd}
+                  onPress={handlePickPhoto}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="add" size={26} color={theme.primary} />
+                  <Text style={styles.thumbAddText}>Añadir</Text>
+                </TouchableOpacity>
+              ) : null}
+            </ScrollView>
+
+            {isEdit && existingPreviews.length > 0 && !hasNewPhotos ? (
+              <Text style={styles.hintText}>
+                Si añades fotos nuevas, se reemplazarán las {existingPreviews.length === 1 ? "actual" : `${existingPreviews.length} actuales`}.
+              </Text>
+            ) : null}
 
             <View style={styles.previewInfoCard}>
               <View style={styles.previewInfoMain}>
@@ -569,11 +678,88 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  photoButtonDisabled: {
+    opacity: 0.5,
+  },
   photoButtonText: {
     color: "#fff",
     fontSize: 12,
     fontWeight: "800",
     marginLeft: 6,
+  },
+  thumbsRow: {
+    paddingVertical: 6,
+    paddingRight: 4,
+    gap: 10,
+  },
+  thumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#F1D3C5",
+    position: "relative",
+  },
+  thumbPrincipal: {
+    borderColor: theme.primary,
+    borderWidth: 2,
+  },
+  thumbImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  thumbBadge: {
+    position: "absolute",
+    bottom: 4,
+    left: 4,
+    right: 4,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 999,
+    paddingVertical: 2,
+    alignItems: "center",
+  },
+  thumbBadgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  thumbRemove: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  thumbAdd: {
+    width: 72,
+    height: 72,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.primary,
+    backgroundColor: "#FBF2EE",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  thumbAddText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.primary,
+    marginTop: 2,
+  },
+  hintText: {
+    fontSize: 12,
+    color: theme.textSoft,
+    fontStyle: "italic",
+    marginTop: 6,
+    marginBottom: 6,
   },
   previewInfoCard: {
     backgroundColor: "#fff",

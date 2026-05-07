@@ -135,6 +135,11 @@ export default function InventoryScreen({ navigation }) {
             cantidad: original.stock,
             unit: original.unit,
             imageUri: original.image?.uri ?? null,
+            //Pasamos también todas las fotos en orden para que la pantalla de
+            //edición pueda mostrarlas como miniaturas existentes.
+            imageUris: Array.isArray(original.images)
+              ? original.images.map((img) => img?.uri).filter(Boolean)
+              : [],
           }
         : null,
     });

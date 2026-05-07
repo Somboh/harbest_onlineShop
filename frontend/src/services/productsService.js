@@ -36,27 +36,33 @@ export const productsService = {
     return api.get(`/product/search?q=${encodeURIComponent(q)}`);
   },
 
-  //Crear/actualizar usan FormData porque el backend espera multipart con campo "foto".
-  //`foto` puede ser un File (web, p.ej. <input type="file">) o una URI (RN).
-  async createProduct(productData, foto) {
+  //Crear/actualizar usan FormData porque el backend espera multipart con
+  //campo "fotos" (varios archivos, hasta 5). Cada elemento de `fotos` puede
+  //ser un File (web) o una URI (RN). Por compatibilidad, también aceptamos
+  //un único valor (no array).
+  async createProduct(productData, fotos) {
+    const fotoArray = Array.isArray(fotos) ? fotos : fotos ? [fotos] : [];
     const formData = new FormData();
     Object.entries(productData).forEach(([key, value]) => {
       formData.append(key, String(value));
     });
-    if (foto) {
-      formData.append("foto", normalizeFotoForUpload(foto));
-    }
+    fotoArray.forEach((foto) => {
+      formData.append("fotos", normalizeFotoForUpload(foto));
+    });
     return api.postForm("/product/", formData, { auth: true });
   },
 
-  async updateProduct(id, productData, foto) {
+  async updateProduct(id, productData, fotos) {
+    const fotoArray = Array.isArray(fotos) ? fotos : fotos ? [fotos] : [];
     const formData = new FormData();
     Object.entries(productData).forEach(([key, value]) => {
       formData.append(key, String(value));
     });
-    if (foto) {
-      formData.append("foto", normalizeFotoForUpload(foto));
-    }
+    //Si fotoArray viene vacío no añadimos nada y el backend mantiene las fotos
+    //existentes; si viene con elementos, el backend reemplaza todas las fotos.
+    fotoArray.forEach((foto) => {
+      formData.append("fotos", normalizeFotoForUpload(foto));
+    });
     return api.putForm(`/product/${id}`, formData, { auth: true });
   },
 

@@ -40,18 +40,23 @@ export class PedidoService {
 
         const { data: lineas } = await this.db.getClient()
             .from("pedido_producto")
-            .select("*, producto:product_id(id, nombre, foto, categoria, fotos:foto(path))")
+            .select("*, producto:product_id(id, nombre, categoria, producto_fotos(orden, fotos(id, path)))")
             .eq("pedido_id", id);
 
-        //Aplanamos foto_url para que el frontend pinte la miniatura sin tener
-        //que conocer el join con la tabla fotos.
+        //Aplanamos foto_url (la principal) y foto_urls (todas en orden) para
+        //que el frontend pinte la miniatura sin conocer el join con fotos.
         const lineasConFoto = (lineas ?? []).map((l: any) => {
             const producto = l?.producto;
             if (!producto) return l;
-            const { fotos, ...prodRest } = producto;
+            const { producto_fotos, ...prodRest } = producto;
+            const ordered = (producto_fotos ?? [])
+                .slice()
+                .sort((a: any, b: any) => (a?.orden ?? 0) - (b?.orden ?? 0))
+                .map((pf: any) => pf?.fotos?.path)
+                .filter((p: string | null | undefined) => !!p);
             return {
                 ...l,
-                producto: { ...prodRest, foto_url: fotos?.path ?? null },
+                producto: { ...prodRest, foto_url: ordered[0] ?? null, foto_urls: ordered },
             };
         });
 

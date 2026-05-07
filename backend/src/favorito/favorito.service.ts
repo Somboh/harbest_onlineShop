@@ -8,22 +8,28 @@ export class FavoritoService {
 
     async getFavoritosByUser(email: string) {
         //devuelve los productos completos (con URL de la foto plana) que el
-        //usuario marcó como favoritos. Hacemos el join con producto y luego
-        //con fotos para que el frontend pueda pintar la miniatura sin más llamadas.
+        //usuario marcó como favoritos. Pasamos por la tabla intermedia
+        //producto_fotos para coger todas las fotos del producto en orden, y
+        //aplanamos la principal en `foto_url` para que el frontend pinte la
+        //miniatura sin más llamadas.
         const { data } = await this.db.getClient()
             .from("favorito")
-            .select("product_id, fecha, producto:product_id(*, fotos:foto(path))")
+            .select("product_id, fecha, producto:product_id(*, producto_fotos(orden, fotos(id, path)))")
             .eq("user_email", email)
             .order("fecha", { ascending: false });
 
-        //Aplanamos foto_url en producto para que el front no tenga que saber del join.
         return (data ?? []).map((row: any) => {
             const producto = row?.producto ?? null;
             if (!producto) return row;
-            const { fotos, ...rest } = producto;
+            const { producto_fotos, ...rest } = producto;
+            const ordered = (producto_fotos ?? [])
+                .slice()
+                .sort((a: any, b: any) => (a?.orden ?? 0) - (b?.orden ?? 0))
+                .map((pf: any) => pf?.fotos?.path)
+                .filter((p: string | null | undefined) => !!p);
             return {
                 ...row,
-                producto: { ...rest, foto_url: fotos?.path ?? null },
+                producto: { ...rest, foto_url: ordered[0] ?? null, foto_urls: ordered },
             };
         });
     }

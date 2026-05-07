@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import FarmerTabBar from "../components/common/FarmerTabBar";
 import ScreenContainer from "../components/common/ScreenContainer";
+import ProductImageCarousel from "../components/products/ProductImageCarousel";
 import { hydrateProduct } from "../data/productAdapter";
 import productsService from "../services/productsService";
 import { ROLE_THEMES } from "../styles/roleThemes";
@@ -143,13 +144,17 @@ export default function ProductDetailFarmerScreen({ navigation, route }) {
           </View>
 
           <View style={styles.imageCard}>
-            {product.image ? (
-              <Image source={product.image} style={styles.productImage} />
-            ) : (
-              <View style={[styles.productImage, styles.productImageEmpty]}>
-                <Ionicons name="leaf" size={48} color={theme.primary} />
-              </View>
-            )}
+            <ProductImageCarousel
+              images={product.images}
+              height={260}
+              borderRadius={28}
+              dotColor={theme.primary}
+              placeholder={
+                <View style={[styles.productImage, styles.productImageEmpty]}>
+                  <Ionicons name="leaf" size={48} color={theme.primary} />
+                </View>
+              }
+            />
           </View>
 
           <View style={styles.infoCard}>

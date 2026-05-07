@@ -1,20 +1,30 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ProductService } from "./product.service";
 import { Product } from "./product.dto";
 import { AuthGuard } from "src/Auth/auth.guard";
-import { FileInterceptor } from "@nestjs/platform-express";
+import { FilesInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { extname } from "path";
+
+const MAX_FOTOS = 5;
+
+const fotosStorage = diskStorage({
+    destination: './uploads',
+    filename: (req,file,cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + extname(file.originalname));
+    },
+});
 
 @Controller("product")
 export class ProductController {
     constructor(private readonly productService: ProductService){}
-    
+
     @Get("/")
     async getAllProducts(){
         return await this.productService.getAllProducts();
     }
-    
+
     @Get("/search")
     async searchProducts(@Query("q") q: string){
         return await this.productService.searchProducts(q);
@@ -34,42 +44,29 @@ export class ProductController {
     async getProductById(@Param("id") id: string){
         return await this.productService.getProductById(id);
     }
-    
+
     @UseGuards(AuthGuard)
     @Post("/")
     /*
-        lo que hago con el interceptor es:
-         - esperar a un archivo que se llame "foto" en el body de la petición
-         - guardarlo en la carpeta "uploads" del servidor local
-         - renombrarlo con un nombre único (timestamp + número aleatorio) para evitar colisiones
-         - una vez guardado el archivo se pasa al service para subirlo a cloudinary y obtener la URL, que es lo que se guardará en la base de datos
+        Recibimos hasta MAX_FOTOS archivos en el campo "fotos" del multipart.
+        Cada uno se guarda primero en ./uploads con un nombre único, después
+        el service los sube a Cloudinary y los enlaza al producto vía la tabla
+        intermedia producto_fotos. El orden en el array determina el orden de
+        las fotos (la primera es la principal).
     */
-    @UseInterceptors(FileInterceptor('foto',{
-        storage: diskStorage({
-            destination: './uploads',
-            filename: (req,file,cb)=>{
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                cb(null,uniqueSuffix+extname(file.originalname));
-            }
-        })
-    }))
-    async createProduct(@Body() product: Product, @UploadedFile() foto: Express.Multer.File){
-        return await this.productService.createProduct(product,foto);
+    @UseInterceptors(FilesInterceptor('fotos', MAX_FOTOS, { storage: fotosStorage }))
+    async createProduct(@Body() product: Product, @UploadedFiles() fotos: Express.Multer.File[]){
+        if(!fotos || fotos.length === 0){
+            throw new BadRequestException("Debes subir al menos una foto del producto");
+        }
+        return await this.productService.createProduct(product, fotos);
     }
 
     @UseGuards(AuthGuard)
     @Put("/:id")
-    @UseInterceptors(FileInterceptor('foto',{
-        storage: diskStorage({
-            destination: './uploads',
-            filename: (req,file,cb)=>{
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                cb(null,uniqueSuffix+extname(file.originalname));
-            }
-        })
-    }))
-    async updateProduct(@Param("id") id: string, @Body() product: Product, @UploadedFile() foto?: Express.Multer.File){
-        return await this.productService.updateProduct(id, product, foto);
+    @UseInterceptors(FilesInterceptor('fotos', MAX_FOTOS, { storage: fotosStorage }))
+    async updateProduct(@Param("id") id: string, @Body() product: Product, @UploadedFiles() fotos?: Express.Multer.File[]){
+        return await this.productService.updateProduct(id, product, fotos ?? []);
     }
 
     @UseGuards(AuthGuard)

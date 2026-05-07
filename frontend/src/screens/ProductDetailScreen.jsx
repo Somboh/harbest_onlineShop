@@ -10,6 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import ScreenContainer from "../components/common/ScreenContainer";
+import ProductImageCarousel from "../components/products/ProductImageCarousel";
 import QuantitySelector from "../components/products/QuantitySelector";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -135,13 +136,17 @@ export default function ProductDetailScreen({ navigation, route }) {
           </View>
 
           <View style={styles.imageCard}>
-            {product.image ? (
-              <Image source={product.image} style={styles.productImage} />
-            ) : (
-              <View style={[styles.productImage, { justifyContent: "center", alignItems: "center", backgroundColor: "#EEF5E3" }]}>
-                <Ionicons name="leaf" size={48} color={colors.primary} />
-              </View>
-            )}
+            <ProductImageCarousel
+              images={product.images}
+              height={260}
+              borderRadius={28}
+              dotColor={colors.primary}
+              placeholder={
+                <View style={[styles.productImage, { justifyContent: "center", alignItems: "center", backgroundColor: "#EEF5E3" }]}>
+                  <Ionicons name="leaf" size={48} color={colors.primary} />
+                </View>
+              }
+            />
 
             {product.badge ? (
               <View style={styles.floatingTag}>

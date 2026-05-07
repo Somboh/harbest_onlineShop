@@ -68,17 +68,37 @@ ON CONFLICT (id) DO UPDATE SET path = EXCLUDED.path;
 
 -- -----------------------------------------------------------------------------
 -- 4) Productos. Los datos están alineados con mockProducts.js.
+-- Nota: tras la migración multifotos, la columna producto.foto ya no existe.
+-- Las fotos de cada producto se enlazan en producto_fotos (sección 5).
 -- -----------------------------------------------------------------------------
-INSERT INTO public.producto (id, nombre, descripcion, precio, cantidad, email_agricultor, foto, categoria, valoracion) VALUES
-    ('naranjas-valencianas',  'Naranjas Valencianas',  'Naranjas de cultivo ecológico, jugosas y con sabor natural intenso. Recolectadas directamente del productor para garantizar frescura y comercio justo.', 1.7,  86, 'granjasjaume@example.com',   'foto-naranjas-valencianas',  'Frutas',   4.9),
-    ('aguacates-granada',     'Aguacates de Granada',  'Aguacates de temporada cultivados en la costa tropical. Perfectos para ensaladas, tostadas y pedidos semanales.',                                       3.2,  42, 'illoverdu@example.com',      'foto-aguacates-granada',     'Frutas',   4.8),
-    ('pimenton-vera',         'Pimentón de la Vera',   'Pimentón de molienda fina con aroma profundo. Ideal para guisos, arroces y elaboraciones artesanas.',                                                  6.4,  25, 'antonio@example.com',        'foto-pimenton-vera',         'Especias', 4.7),
-    ('brocoli-fresco',        'Brócoli fresco',        'Brócoli fresco de huerta local, seleccionado por tamaño y punto de maduración para mantener textura y sabor.',                                         2.95, 34, 'verdevivo@example.com',      'foto-brocoli-fresco',        'Verduras', 4.6),
-    ('canela-molida',         'Canela molida',         'Canela molida con aroma dulce e intenso. Buena para repostería, infusiones y platos especiados.',                                                      4.2,  18, 'esenciasdelsur@example.com', 'foto-canela-molida',         'Especias', 4.5),
-    ('fresas-temporada',      'Fresas de temporada',   'Fresas de temporada con color vivo y textura firme. Recomendadas para consumir en pocos días.',                                                        5.1,  29, 'huertadelsur@example.com',   'foto-fresas-temporada',      'Frutas',   4.8),
-    ('lechuga-romana',        'Lechuga romana',        'Lechuga romana fresca, ideal para ensaladas y acompañamientos. Se entrega limpia y seleccionada.',                                                     1.5,  51, 'ecofruit@example.com',       'foto-lechuga-romana',        'Verduras', 4.4),
-    ('zanahorias-huerta',     'Zanahorias',            'Zanahorias frescas de huerta, perfectas para cocinar, cremas o consumir en crudo.',                                                                    1.9,  47, 'huertaviva@example.com',     'foto-zanahorias-huerta',     'Verduras', 4.6),
-    ('manzanas-jaume',        'Manzanas Fuji',         'Manzanas Fuji de cultivo ecológico, recogidas en el punto exacto de maduración para máxima dulzura y textura.',                                        2.1,  68, 'jaume@example.com',          'foto-manzanas-jaume',        'Frutas',   4.7),
-    ('tomates-jaume',         'Tomates Raff',          'Tomates Raff de cultivo local, con sabor intenso y aroma natural. Perfectos para ensaladas y gazpachos.',                                              2.5,  56, 'jaume@example.com',          'foto-tomates-jaume',         'Verduras', 4.8),
-    ('pimienta-negra-jaume',  'Pimienta Negra Molida', 'Pimienta negra de primera calidad, molida en el momento para conservar su aroma y sabor incomparables.',                                               8.5,  12, 'jaume@example.com',          'foto-pimienta-negra-jaume',  'Especias', 4.9)
+INSERT INTO public.producto (id, nombre, descripcion, precio, cantidad, email_agricultor, categoria, valoracion) VALUES
+    ('naranjas-valencianas',  'Naranjas Valencianas',  'Naranjas de cultivo ecológico, jugosas y con sabor natural intenso. Recolectadas directamente del productor para garantizar frescura y comercio justo.', 1.7,  86, 'granjasjaume@example.com',   'Frutas',   4.9),
+    ('aguacates-granada',     'Aguacates de Granada',  'Aguacates de temporada cultivados en la costa tropical. Perfectos para ensaladas, tostadas y pedidos semanales.',                                       3.2,  42, 'illoverdu@example.com',      'Frutas',   4.8),
+    ('pimenton-vera',         'Pimentón de la Vera',   'Pimentón de molienda fina con aroma profundo. Ideal para guisos, arroces y elaboraciones artesanas.',                                                  6.4,  25, 'antonio@example.com',        'Especias', 4.7),
+    ('brocoli-fresco',        'Brócoli fresco',        'Brócoli fresco de huerta local, seleccionado por tamaño y punto de maduración para mantener textura y sabor.',                                         2.95, 34, 'verdevivo@example.com',      'Verduras', 4.6),
+    ('canela-molida',         'Canela molida',         'Canela molida con aroma dulce e intenso. Buena para repostería, infusiones y platos especiados.',                                                      4.2,  18, 'esenciasdelsur@example.com', 'Especias', 4.5),
+    ('fresas-temporada',      'Fresas de temporada',   'Fresas de temporada con color vivo y textura firme. Recomendadas para consumir en pocos días.',                                                        5.1,  29, 'huertadelsur@example.com',   'Frutas',   4.8),
+    ('lechuga-romana',        'Lechuga romana',        'Lechuga romana fresca, ideal para ensaladas y acompañamientos. Se entrega limpia y seleccionada.',                                                     1.5,  51, 'ecofruit@example.com',       'Verduras', 4.4),
+    ('zanahorias-huerta',     'Zanahorias',            'Zanahorias frescas de huerta, perfectas para cocinar, cremas o consumir en crudo.',                                                                    1.9,  47, 'huertaviva@example.com',     'Verduras', 4.6),
+    ('manzanas-jaume',        'Manzanas Fuji',         'Manzanas Fuji de cultivo ecológico, recogidas en el punto exacto de maduración para máxima dulzura y textura.',                                        2.1,  68, 'jaume@example.com',          'Frutas',   4.7),
+    ('tomates-jaume',         'Tomates Raff',          'Tomates Raff de cultivo local, con sabor intenso y aroma natural. Perfectos para ensaladas y gazpachos.',                                              2.5,  56, 'jaume@example.com',          'Verduras', 4.8),
+    ('pimienta-negra-jaume',  'Pimienta Negra Molida', 'Pimienta negra de primera calidad, molida en el momento para conservar su aroma y sabor incomparables.',                                               8.5,  12, 'jaume@example.com',          'Especias', 4.9)
 ON CONFLICT (id) DO NOTHING;
+
+-- -----------------------------------------------------------------------------
+-- 5) Enlaces producto_fotos: cada producto del seed con su foto principal en
+-- orden=0. Idempotente: ON CONFLICT no hace nada si ya existe el enlace.
+-- -----------------------------------------------------------------------------
+INSERT INTO public.producto_fotos (producto_id, foto_id, orden) VALUES
+    ('naranjas-valencianas', 'foto-naranjas-valencianas', 0),
+    ('aguacates-granada',    'foto-aguacates-granada',    0),
+    ('pimenton-vera',        'foto-pimenton-vera',        0),
+    ('brocoli-fresco',       'foto-brocoli-fresco',       0),
+    ('canela-molida',        'foto-canela-molida',        0),
+    ('fresas-temporada',     'foto-fresas-temporada',     0),
+    ('lechuga-romana',       'foto-lechuga-romana',       0),
+    ('zanahorias-huerta',    'foto-zanahorias-huerta',    0),
+    ('manzanas-jaume',       'foto-manzanas-jaume',       0),
+    ('tomates-jaume',        'foto-tomates-jaume',        0),
+    ('pimienta-negra-jaume', 'foto-pimienta-negra-jaume', 0)
+ON CONFLICT DO NOTHING;
