@@ -1,17 +1,18 @@
-import React from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   Image,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import colors from "../styles/colors";
-import ScreenContainer from "../components/common/ScreenContainer";
 import ClientTabBar from "../components/common/ClientTabBar";
+import ScreenContainer from "../components/common/ScreenContainer";
 import { useAuth } from "../context/AuthContext";
+import userService from "../services/userService";
+import colors from "../styles/colors";
 
 export default function ProfileScreenUser({ navigation }) {
   const { logout } = useAuth();
@@ -22,7 +23,22 @@ export default function ProfileScreenUser({ navigation }) {
     await logout();
     navigation.reset({ index: 0, routes: [{ name: "Splash" }] });
   };
+  let [nombre,setNombre] = useState("");
+  let [email,setEmail] = useState("");
+  let [foto,setFoto] = useState("");
 
+  const getUserInfo = async () => {
+    const res = await userService.getMe();
+    
+    setNombre(res.nombre);
+    setEmail(res.email);
+    setFoto(res.foto);
+  };
+
+
+  useEffect(()=>{
+    getUserInfo();
+  }, []);
   return (
     <ScreenContainer>
       <View style={styles.container}>
@@ -63,12 +79,12 @@ export default function ProfileScreenUser({ navigation }) {
           {/* TARJETA DE PERFIL */}
           <View style={styles.profileCard}>
             <Image
-              source={require("../../assets/images/pepe.jpg")}
+              source={foto}
               style={styles.avatarImage}
             />
 
-            <Text style={styles.username}>Pepe27</Text>
-            <Text style={styles.email}>harbest@alu.ua.es</Text>
+            <Text style={styles.username}>{nombre}</Text>
+            <Text style={styles.email}>{email}</Text>
 
             <View style={styles.badgeRow}>
               <View style={styles.userBadge}>

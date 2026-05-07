@@ -29,13 +29,29 @@ export class FarmerService {
     }
 
     async getFarmerByEmail(email: string){
+      let res = {
+        id: "",
+        nombre: "",
+        email: "",
+        direccion: "",
+        telefono: 0,
+        foto: "",
+      }
       const {data,error} = await this.db.getClient().from('agricultor').select('*').eq('email', email).single();
 
+      res.nombre = data?.nombre || "";
+      res.email = data?.email || "";
+      res.id = data?.id || "";
+      res.direccion = data?.direccion || "";
+      res.telefono = data?.telefono || 0;
+
+      const {data:fotoData, error:fotoError} = await this.db.getClient().from("fotos").select("path").eq("id", data?.foto).single();
+      res.foto = fotoData?.path || "";
       if(error){
         return {status:'ERROR', message:'Error al obtener el agricultor'};
       }
 
-      return data;
+      return res;
     }
     
 
