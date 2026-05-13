@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -23,6 +24,8 @@ const CATEGORY = 'Frutas';
 export default function CategoryFruitsScreen({ navigation }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -42,6 +45,21 @@ export default function CategoryFruitsScreen({ navigation }) {
       cancelled = true;
     };
   }, []);
+
+  const query = searchText.trim().toLowerCase();
+  const filteredProducts = query
+    ? products.filter((product) => {
+        return [
+          product.name,
+          product.seller,
+          product.category,
+          product.badge,
+          product.subtitle,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query));
+      })
+    : products;
 
   return (
     <ScreenContainer>
@@ -125,16 +143,52 @@ export default function CategoryFruitsScreen({ navigation }) {
             </View>
 
             <TouchableOpacity style={styles.searchButton}>
-            <Ionicons name="search" size={18} color={colors.text} />
+            <Ionicons
+              name={searchOpen ? 'close' : 'search'}
+              size={18}
+              color={colors.text}
+              onPress={() => {
+                if (searchOpen) setSearchText('');
+                setSearchOpen((current) => !current);
+              }}
+            />
             </TouchableOpacity>
           </View>
+
+          {searchOpen ? (
+            <View style={styles.searchBox}>
+              <Ionicons name="search-outline" size={18} color={colors.textSoft} />
+              <TextInput
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="Buscar frutas..."
+                placeholderTextColor={colors.textSoft}
+                style={styles.searchInput}
+                autoCorrect={false}
+                returnKeyType="search"
+              />
+              {searchText.length > 0 ? (
+                <TouchableOpacity onPress={() => setSearchText('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color={colors.textSoft} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
 
           {/* LISTADO EN 2 COLUMNAS */}
           {loading && products.length === 0 ? (
             <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
+          ) : filteredProducts.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={28} color={colors.fruta} />
+              <Text style={styles.emptyTitle}>No hay frutas con ese nombre</Text>
+              <Text style={styles.emptySubtitle}>
+                Prueba con otra búsqueda o limpia el campo.
+              </Text>
+            </View>
           ) : (
             <View style={styles.productsGrid}>
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <FruitProductCard
                   key={product.id}
                   navigation={navigation}
@@ -528,6 +582,49 @@ const styles = StyleSheet.create({
   backgroundColor: '#fff',
   justifyContent: 'center',
   alignItems: 'center',
+},
+
+searchBox: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: colors.fruta,
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+  marginBottom: 16,
+},
+
+searchInput: {
+  flex: 1,
+  marginLeft: 8,
+  fontSize: 14,
+  color: colors.text,
+},
+
+emptyState: {
+  backgroundColor: '#fff',
+  borderRadius: 22,
+  paddingHorizontal: 24,
+  paddingVertical: 30,
+  alignItems: 'center',
+},
+
+emptyTitle: {
+  fontSize: 17,
+  fontWeight: '800',
+  color: colors.text,
+  marginTop: 10,
+  marginBottom: 6,
+  textAlign: 'center',
+},
+
+emptySubtitle: {
+  fontSize: 13,
+  lineHeight: 19,
+  color: colors.textSoft,
+  textAlign: 'center',
 },
 
 floatingButton: {

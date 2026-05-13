@@ -3,6 +3,7 @@ import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useResponsive } from "../../hooks/useResponsive";
 import { ROLE_THEMES } from "../../styles/roleThemes";
+import { tabBarStyles } from "./tabBarStyles";
 
 export default function ClientTabBar({ Navigation, ActiveRoute }) {
   const { isDesktop } = useResponsive();
@@ -13,11 +14,11 @@ export default function ClientTabBar({ Navigation, ActiveRoute }) {
   const InactiveColor = "#8A8A8A";
 
   return (
-    <View style={Styles.TabBarWrapper}>
-      <View style={Styles.Pill}>
+    <View style={tabBarStyles.wrapper}>
+      <View style={tabBarStyles.pill}>
         {/* BUSCAR / HOME */}
         <TouchableOpacity
-          style={[Styles.TabIcon, ActiveRoute === "Home" && Styles.ActiveTabBg]}
+          style={[tabBarStyles.tabIcon, ActiveRoute === "Home" && Styles.ActiveTabBg]}
           onPress={() => Navigation.navigate("Home")}
         >
           <Ionicons
@@ -30,7 +31,7 @@ export default function ClientTabBar({ Navigation, ActiveRoute }) {
         {/* FAVORITOS */}
         <TouchableOpacity
           style={[
-            Styles.TabIcon,
+            tabBarStyles.tabIcon,
             ActiveRoute === "Favorites" && Styles.ActiveTabBg,
           ]}
           onPress={() => Navigation.navigate("Favorites")}
@@ -44,7 +45,7 @@ export default function ClientTabBar({ Navigation, ActiveRoute }) {
 
         {/* CARRITO */}
         <TouchableOpacity
-          style={[Styles.TabIcon, ActiveRoute === "Cart" && Styles.ActiveTabBg]}
+          style={[tabBarStyles.tabIcon, ActiveRoute === "Cart" && Styles.ActiveTabBg]}
           onPress={() => Navigation.navigate("Cart")}
         >
           <Ionicons
@@ -57,7 +58,7 @@ export default function ClientTabBar({ Navigation, ActiveRoute }) {
         {/* PERFIL USUARIO */}
         <TouchableOpacity
           style={[
-            Styles.TabIcon,
+            tabBarStyles.tabIcon,
             ActiveRoute === "ProfileUser" && Styles.ActiveTabBg,
           ]}
           onPress={() => Navigation.navigate("ProfileUser")}
@@ -74,27 +75,5 @@ export default function ClientTabBar({ Navigation, ActiveRoute }) {
 }
 
 const Styles = StyleSheet.create({
-  TabBarWrapper: {
-    position: "absolute",
-    bottom: 30,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
-  Pill: {
-    backgroundColor: "#F2F2F2",
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    alignItems: "center",
-    borderRadius: 40,
-    paddingVertical: 8,
-    width: "75%",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  TabIcon: { padding: 10, borderRadius: 25 },
   ActiveTabBg: { backgroundColor: ROLE_THEMES.user.primarySoft },
 });

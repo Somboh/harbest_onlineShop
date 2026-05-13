@@ -191,7 +191,7 @@ export default function ProductDetailScreen({ navigation, route }) {
 
             <View style={styles.divider} />
 
-            <Text style={styles.sectionTitle}>Descripcion</Text>
+            <Text style={styles.sectionTitle}>Descripción</Text>
             <Text style={styles.description}>{product.description}</Text>
 
             {(product.location || product.deliveryTime) ? (

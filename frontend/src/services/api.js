@@ -1,10 +1,22 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 //URL base del backend. Se configura en app.json → expo.extra.apiBaseUrl.
 //Para desarrollo en local: http://localhost:3000
 //Para móvil real (Expo Go en un dispositivo), `localhost` apunta al teléfono;
 //hay que poner la IP de tu PC en la LAN (ej: http://192.168.1.42:3000).
-export const API_BASE_URL = /*Constants.expoConfig?.extra?.apiBaseUrl ??*/ /*"https://harbest-onlineshop.onrender.com"*/ "http://localhost:3000";
+const LOCAL_API_URL = Platform.select({
+  android: "http://10.0.2.2:3000",
+  ios: "http://localhost:3000",
+  web: "http://localhost:3000",
+  default: "http://localhost:3000",
+});
+
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL ||
+  Constants.expoConfig?.extra?.apiBaseUrl ||
+  LOCAL_API_URL;
 
 const buildHeaders = async (extra = {}, withAuth = false) => {
   const headers = { "Content-Type": "application/json", ...extra };

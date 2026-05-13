@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import DisplayModeMenu from "../components/common/DisplayModeMenu";
 import FarmerTabBar from "../components/common/FarmerTabBar";
 import ScreenContainer from "../components/common/ScreenContainer";
 import { farmerService } from "../services/farmerService";
@@ -58,16 +59,7 @@ export default function ProfileScreenAgricultor({ navigation }) {
               </TouchableOpacity>
 
               <View style={styles.headerActions}>
-                <TouchableOpacity
-                  style={styles.logoWrap}
-                  onPress={() => navigation.navigate("HomeAgricultor")}
-                  activeOpacity={0.85}
-                >
-                  <Image
-                    source={require("../../assets/images/agricultor-logo.png")}
-                    style={styles.headerLogo}
-                  />
-                </TouchableOpacity>
+                <DisplayModeMenu role="farmer" trigger="logo" />
               </View>
             </View>
 

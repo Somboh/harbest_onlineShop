@@ -10,6 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import ClientTabBar from "../components/common/ClientTabBar";
+import DisplayModeMenu from "../components/common/DisplayModeMenu";
 import ScreenContainer from "../components/common/ScreenContainer";
 import { useCart } from "../context/CartContext";
 import { useResponsive } from "../hooks/useResponsive";
@@ -46,12 +47,7 @@ export default function CartScreen({ navigation }) {
             </View>
 
             <View style={styles.headerActions}>
-              <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-                <Image
-                  source={require("../../assets/images/logo-harbest.png")}
-                  style={styles.logoImage}
-                />
-              </TouchableOpacity>
+              <DisplayModeMenu role="user" trigger="logo" />
             </View>
           </View>
 
@@ -77,9 +73,9 @@ export default function CartScreen({ navigation }) {
             <View style={isDesktop ? styles.leftColDesktop : null}>
               <View style={styles.sectionHeader}>
                 <View>
-                  <Text style={styles.sectionTitle}>Tu seleccion</Text>
+                  <Text style={styles.sectionTitle}>Tu selección</Text>
                   <Text style={styles.sectionSubtitle}>
-                    Productos anadidos al carrito
+                    Productos añadidos al carrito
                   </Text>
                 </View>
 
@@ -105,7 +101,7 @@ export default function CartScreen({ navigation }) {
                   <Ionicons name="basket-outline" size={32} color={colors.primary} />
                   <Text style={styles.emptyTitle}>Tu carrito esta vacio</Text>
                   <Text style={styles.emptySubtitle}>
-                    Explora el catalogo y anade productos frescos para verlos aqui.
+                    Explora el catálogo y añade productos frescos para verlos aquí.
                   </Text>
                   <TouchableOpacity
                     style={styles.browseButton}
@@ -140,7 +136,7 @@ export default function CartScreen({ navigation }) {
                 </View>
 
                 <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Envio</Text>
+                  <Text style={styles.totalLabel}>Envío</Text>
                   <Text style={styles.totalValue}>{formatPrice(shipping)}</Text>
                 </View>
 

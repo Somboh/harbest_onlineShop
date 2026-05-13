@@ -4,6 +4,7 @@ import {
   View,
   Text,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
   Image,
   ScrollView,
@@ -11,7 +12,6 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
-import colors from "../styles/colors";
 import ScreenContainer from "../components/common/ScreenContainer";
 import { useAuth } from "../context/AuthContext";
 import { useDisplaySettings } from "../context/DisplaySettingsContext";
@@ -33,6 +33,7 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
 
   const [farmerProducts, setFarmerProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState("");
 
   //Recargamos cada vez que la pantalla recibe foco para que un producto recién
   //creado en AddProduct aparezca al volver aquí.
@@ -63,13 +64,32 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
     }, [user?.email]),
   );
 
-  const filteredProducts = useMemo(() => {
+  const categoryProducts = useMemo(() => {
     if (isAllCategories) return farmerProducts;
     const target = category.toLowerCase();
     return farmerProducts.filter(
       (product) => (product.category || "").toLowerCase() === target,
     );
   }, [farmerProducts, category, isAllCategories]);
+
+  const filteredProducts = useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+    if (!query) return categoryProducts;
+
+    return categoryProducts.filter((product) =>
+      [
+        product.name,
+        product.category,
+        product.description,
+        product.badge,
+        product.unit,
+        product.stock,
+        product.price,
+      ]
+        .filter((value) => value !== undefined && value !== null)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [categoryProducts, searchText]);
 
   const getCategoryIcon = () => {
     const icons = {
@@ -189,7 +209,7 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
                 >
                   <Ionicons name="layers-outline" size={14} color="#2B2B2B" />
                   <Text style={[styles.heroInfoText, { color: "#2B2B2B" }]}>
-                    {filteredProducts.length} productos
+                    {categoryProducts.length} productos
                   </Text>
                 </View>
 
@@ -209,20 +229,50 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
             </View>
           </View>
 
+          <View
+            style={[
+              styles.searchBox,
+              {
+                backgroundColor: display.surface,
+                borderColor: display.border,
+              },
+            ]}
+          >
+            <Ionicons name="search-outline" size={18} color={display.icon} />
+            <TextInput
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder={`Buscar en ${category.toLowerCase()}...`}
+              placeholderTextColor={display.textSoft}
+              style={[styles.searchInput, { color: display.text }]}
+              autoCorrect={false}
+              returnKeyType="search"
+            />
+            {searchText.length > 0 ? (
+              <TouchableOpacity onPress={() => setSearchText("")} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={display.textSoft} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
           {/* SECCIÓN TITULAR */}
           <View style={styles.sectionHeader}>
             <View>
               <Text style={[styles.sectionTitle, { color: display.text }]}>
                 {filteredProducts.length > 0
                   ? "Productos disponibles"
-                  : "Sin productos"}
+                  : searchText.trim()
+                    ? "Sin resultados"
+                    : "Sin productos"}
               </Text>
               <Text
                 style={[styles.sectionSubtitle, { color: display.textSoft }]}
               >
                 {filteredProducts.length > 0
                   ? `${filteredProducts.length} ${category === "Todos" ? "producto(s)" : "en esta categoría"}`
-                  : "Comienza agregando productos a tu inventario"}
+                  : searchText.trim()
+                    ? "Prueba con otro nombre, categoría o precio"
+                    : "Comienza agregando productos a tu inventario"}
               </Text>
             </View>
           </View>
@@ -261,18 +311,32 @@ export default function ProductosAgricultorScreen({ navigation, route }) {
                 color={display.textSoft}
               />
               <Text style={[styles.emptyText, { color: display.text }]}>
-                No hay productos en {category.toLowerCase()}
+                {searchText.trim()
+                  ? "No hay productos con esa búsqueda"
+                  : `No hay productos en ${category.toLowerCase()}`}
               </Text>
               <Text style={[styles.emptySubtext, { color: display.textSoft }]}>
-                Crea uno nuevo para empezar a vender
+                {searchText.trim()
+                  ? "Limpia el buscador o prueba con otro término"
+                  : "Crea uno nuevo para empezar a vender"}
               </Text>
-              <TouchableOpacity
-                style={[styles.addButton, { backgroundColor: display.primary }]}
-                onPress={() => navigation.navigate("AddProduct")}
-              >
-                <Ionicons name="add-circle" size={20} color="#fff" />
-                <Text style={styles.addButtonText}>Agregar producto</Text>
-              </TouchableOpacity>
+              {searchText.trim() ? (
+                <TouchableOpacity
+                  style={[styles.addButton, { backgroundColor: display.primary }]}
+                  onPress={() => setSearchText("")}
+                >
+                  <Ionicons name="close-circle" size={20} color="#fff" />
+                  <Text style={styles.addButtonText}>Limpiar búsqueda</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.addButton, { backgroundColor: display.primary }]}
+                  onPress={() => navigation.navigate("AddProduct")}
+                >
+                  <Ionicons name="add-circle" size={20} color="#fff" />
+                  <Text style={styles.addButtonText}>Agregar producto</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </ScrollView>
@@ -457,6 +521,22 @@ const styles = StyleSheet.create({
   heroInfoText: {
     fontSize: 11,
     fontWeight: "600",
+  },
+
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginBottom: 18,
+  },
+
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
   },
 
   sectionHeader: {

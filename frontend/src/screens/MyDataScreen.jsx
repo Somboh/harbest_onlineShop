@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +11,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+import ScreenContainer from "../components/common/ScreenContainer";
 import colors from "../styles/colors";
 import userService from "../services/userService";
 
@@ -149,6 +150,7 @@ export default function MyDataScreen({ navigation }) {
   };
 
   return (
+    <ScreenContainer>
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.flex}
@@ -304,6 +306,7 @@ export default function MyDataScreen({ navigation }) {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </ScreenContainer>
   );
 }
 

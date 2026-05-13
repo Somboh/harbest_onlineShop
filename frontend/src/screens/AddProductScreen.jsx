@@ -26,9 +26,9 @@ const categoryOptions = [
 ];
 
 const previewImages = {
-  Frutas: require("../../assets/images/comida/naranjas.jpg"),
-  Verduras: require("../../assets/images/comida/verduras.webp"),
-  Especias: require("../../assets/images/comida/pimenton.jpg"),
+  Frutas: require("../../assets/images/comida/fruta-default.png"),
+  Verduras: require("../../assets/images/comida/verdura-default.png"),
+  Especias: require("../../assets/images/comida/especia-default.png"),
 };
 
 const MAX_FOTOS = 5;
@@ -241,7 +241,7 @@ export default function AddProductScreen({ navigation, route }) {
               >
                 <Ionicons name="arrow-back" size={22} color={theme.text} />
                 <Text style={styles.headerText}>
-                  {isEdit ? "Editar producto" : "Anadir nuevo producto"}
+                  {isEdit ? "Editar producto" : "Añadir nuevo producto"}
                 </Text>
               </TouchableOpacity>
 
@@ -365,7 +365,7 @@ export default function AddProductScreen({ navigation, route }) {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Datos del producto</Text>
               <Text style={styles.sectionSubtitle}>
-                Completa la informacion que vera el cliente.
+                Completa la información que verá el cliente.
               </Text>
             </View>
 
@@ -412,7 +412,7 @@ export default function AddProductScreen({ navigation, route }) {
               </View>
 
               <InputField
-                label="Descripcion"
+                label="Descripción"
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Ej. Recolectados esta semana, dulces y firmes"
@@ -485,7 +485,7 @@ export default function AddProductScreen({ navigation, route }) {
               <View style={styles.summaryTextBlock}>
                 <Text style={styles.summaryTitle}>Listo para publicar</Text>
                 <Text style={styles.summaryText}>
-                  El producto aparecera en tu inventario y podras editarlo
+                  El producto aparecerá en tu inventario y podrás editarlo
                   cuando lo necesites.
                 </Text>
               </View>

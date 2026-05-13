@@ -11,6 +11,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import colors from '../styles/colors';
+import ClientTabBar from '../components/common/ClientTabBar';
+import DisplayModeMenu from '../components/common/DisplayModeMenu';
 import ScreenContainer from '../components/common/ScreenContainer';
 
 export default function SearchScreen({ navigation }) {
@@ -111,12 +113,7 @@ export default function SearchScreen({ navigation }) {
             </View>
 
             <View style={styles.headerActions}>
-              <TouchableOpacity onPress={() => navigation.navigate('Home')}>
-                <Image
-                  source={require('../../assets/images/logo-harbest.png')}
-                  style={styles.logoImage}
-                />
-              </TouchableOpacity>
+              <DisplayModeMenu role="user" trigger="logo" />
             </View>
           </View>
 
@@ -249,24 +246,7 @@ export default function SearchScreen({ navigation }) {
           )}
         </ScrollView>
 
-        {/* BOTTOM BAR */}
-        <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.activeButton}>
-            <Ionicons name="search" size={18} color="#fff" />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
-            <Ionicons name="heart-outline" size={20} color="#8A8A8A" />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
-            <Ionicons name="cart-outline" size={20} color="#8A8A8A" />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('ProfileUser')}>
-            <Ionicons name="person-outline" size={20} color="#8A8A8A" />
-          </TouchableOpacity>
-        </View>
+        <ClientTabBar Navigation={navigation} ActiveRoute="Home" />
       </View>
     </ScreenContainer>
   );
@@ -597,31 +577,4 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  bottomBar: {
-    position: 'absolute',
-    bottom: 18,
-    left: 32,
-    right: 32,
-    backgroundColor: '#fff',
-    borderRadius: 999,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-
-  activeButton: {
-    backgroundColor: colors.primary,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 });

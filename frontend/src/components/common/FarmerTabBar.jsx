@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { useResponsive } from "../../hooks/useResponsive";
 import { ROLE_THEMES } from "../../styles/roleThemes";
+import { tabBarStyles } from "./tabBarStyles";
 
 export default function FarmerTabBar({ Navigation, ActiveRoute }) {
   const { isDesktop } = useResponsive();
@@ -12,12 +13,12 @@ export default function FarmerTabBar({ Navigation, ActiveRoute }) {
   const InactiveColor = "#8A8A8A";
 
   return (
-    <View style={Styles.TabBarWrapper}>
-      <View style={Styles.Pill}>
+    <View style={tabBarStyles.wrapper}>
+      <View style={tabBarStyles.pill}>
         {/* BUSCAR / HOME */}
         <TouchableOpacity
           style={[
-            Styles.TabIcon,
+            tabBarStyles.tabIcon,
             ActiveRoute === "HomeAgricultor" && Styles.ActiveTabBg,
           ]}
           onPress={() => Navigation.navigate("HomeAgricultor")}
@@ -34,7 +35,7 @@ export default function FarmerTabBar({ Navigation, ActiveRoute }) {
         {/* PEDIDOS */}
         <TouchableOpacity
           style={[
-            Styles.TabIcon,
+            tabBarStyles.tabIcon,
             ActiveRoute === "OrdersAgricultor" && Styles.ActiveTabBg,
           ]}
           onPress={() => Navigation.navigate("OrdersAgricultor")}
@@ -51,7 +52,7 @@ export default function FarmerTabBar({ Navigation, ActiveRoute }) {
         {/* AÑADIR PRODUCTO */}
         <TouchableOpacity
           style={[
-            Styles.TabIcon,
+            tabBarStyles.tabIcon,
             ActiveRoute === "AddProduct" && Styles.ActiveTabBg,
           ]}
           onPress={() => Navigation.navigate("AddProduct")}
@@ -66,7 +67,7 @@ export default function FarmerTabBar({ Navigation, ActiveRoute }) {
         {/* PERFIL */}
         <TouchableOpacity
           style={[
-            Styles.TabIcon,
+            tabBarStyles.tabIcon,
             ActiveRoute === "ProfileAgricultor" && Styles.ActiveTabBg,
           ]}
           onPress={() => Navigation.navigate("ProfileAgricultor")}
@@ -85,27 +86,5 @@ export default function FarmerTabBar({ Navigation, ActiveRoute }) {
 }
 
 const Styles = StyleSheet.create({
-  TabBarWrapper: {
-    position: "absolute",
-    bottom: 30,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
-  Pill: {
-    backgroundColor: "#F2F2F2",
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    alignItems: "center",
-    borderRadius: 40,
-    paddingVertical: 8,
-    width: "75%",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  TabIcon: { padding: 10, borderRadius: 25 },
   ActiveTabBg: { backgroundColor: ROLE_THEMES.farmer.primarySoft },
 });

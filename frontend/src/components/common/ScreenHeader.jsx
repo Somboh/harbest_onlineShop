@@ -1,14 +1,15 @@
 import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import colors from "../../styles/colors";
+import DisplayModeMenu from "./DisplayModeMenu";
 
 export default function ScreenHeader({
   navigation,
   title,
   subtitle,
   showBack = true,
-  logoPressRoute = "Home",
+  role = "user",
 }) {
   return (
     <View style={styles.header}>
@@ -25,12 +26,7 @@ export default function ScreenHeader({
         <Text style={styles.title}>{title}</Text>
       </View>
 
-      <TouchableOpacity onPress={() => navigation.navigate(logoPressRoute)}>
-        <Image
-          source={require("../../../assets/images/logo-harbest.png")}
-          style={styles.logo}
-        />
-      </TouchableOpacity>
+      <DisplayModeMenu role={role} trigger="logo" />
     </View>
   );
 }
@@ -61,10 +57,5 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     color: colors.text,
-  },
-  logo: {
-    width: 38,
-    height: 38,
-    resizeMode: "contain",
   },
 });
