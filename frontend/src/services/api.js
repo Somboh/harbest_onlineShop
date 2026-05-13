@@ -6,7 +6,7 @@ import { Platform } from "react-native";
 //Para desarrollo en local: http://localhost:3000
 //Para móvil real (Expo Go en un dispositivo), `localhost` apunta al teléfono;
 //hay que poner la IP de tu PC en la LAN (ej: http://192.168.1.42:3000).
-export const API_BASE_URL = /*Constants.expoConfig?.extra?.apiBaseUrl ??*/ /*"https://harbest-onlineshop.onrender.com"*/ "http://localhost:3000";
+export const API_BASE_URL = /*Constants.expoConfig?.extra?.apiBaseUrl ??*/ "https://harbest-onlineshop.onrender.com";
 
 const buildHeaders = async (extra = {}, withAuth = false) => {
   const headers = { "Content-Type": "application/json", ...extra };
