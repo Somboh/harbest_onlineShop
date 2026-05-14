@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -24,6 +24,25 @@ export default function ProductImageCarousel({
   const scrollRef = useRef(null);
 
   const safeImages = Array.isArray(images) ? images.filter(Boolean) : [];
+
+  useEffect(() => {
+    // Si no hay imágenes o solo hay una, no necesitamos auto-scroll
+    if (safeImages.length <= 1) return;
+
+    const timer = setInterval(() => {
+      // Calculamos el siguiente índice. Si estamos en el último, volvemos al 0.
+      const nextIndex = (active + 1) % safeImages.length;
+      
+      // Movemos el ScrollView a la nueva posición
+      scrollRef.current?.scrollTo({
+        x: nextIndex * width,
+        animated: true,
+      });
+    }, 1500); // 1500 milisegundos = 1.5 segundos
+
+    // Limpiamos el intervalo si el componente se desmonta o el índice activo cambia
+    return () => clearInterval(timer);
+  }, [active, safeImages.length, width]);
 
   if (safeImages.length === 0) {
     return (
