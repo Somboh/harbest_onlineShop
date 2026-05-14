@@ -30,6 +30,8 @@ export default function LoginScreen({ navigation }) {
   const [errorMessage, setErrorMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [showPassword, setShowPassword] = useState(false);
+
   const themeColors = {
     primary: isFarmer ? colors.secondary : colors.primary,
     text: colors.text,
@@ -135,9 +137,9 @@ export default function LoginScreen({ navigation }) {
             placeholderTextColor={colors.textSoft}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
           />
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowPassword((prev) => !prev)}>
             <Text style={[styles.showText, { color: themeColors.primary }]}>
               Mostrar
             </Text>
