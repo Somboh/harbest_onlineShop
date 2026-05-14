@@ -132,6 +132,7 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.label}>Contraseña</Text>
         <View style={styles.passwordWrapper}>
           <TextInput
+            key={showPassword ? "password-visible" : "password-hidden"}
             style={styles.passwordInput}
             placeholder="Introduce tu contraseña"
             placeholderTextColor={colors.textSoft}
@@ -139,10 +140,17 @@ export default function LoginScreen({ navigation }) {
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
           />
-          <TouchableOpacity onPress={() => setShowPassword((prev) => !prev)}>
-            <Text style={[styles.showText, { color: themeColors.primary }]}>
-              Mostrar
-            </Text>
+          <TouchableOpacity
+            style={styles.showPasswordButton}
+            onPress={() => setShowPassword((prev) => !prev)}
+            activeOpacity={0.75}
+            hitSlop={8}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color={themeColors.primary}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -458,9 +466,12 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 
-  showText: {
-    fontSize: 12,
-    fontWeight: "700",
+  showPasswordButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   forgotWrapper: {
