@@ -5,7 +5,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,7 +12,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+import ScreenContainer from "../components/common/ScreenContainer";
 import { useCart } from "../context/CartContext";
 import authService from "../services/authService";
 import ordersService from "../services/ordersService";
@@ -146,6 +147,7 @@ export default function CheckoutScreen({ navigation }) {
   };
 
   return (
+    <ScreenContainer>
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.flex}
@@ -304,6 +306,7 @@ export default function CheckoutScreen({ navigation }) {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </ScreenContainer>
   );
 }
 

@@ -29,7 +29,7 @@ export const mockCategories = [
     route: "CategoryAll",
     icon: "grid",
     color: "#BCBCBC",
-    subtitle: "Todo el catalogo",
+    subtitle: "Todo el catálogo",
   },
 ];
 

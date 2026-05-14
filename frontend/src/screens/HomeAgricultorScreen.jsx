@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 
+import DisplayModeMenu from "../components/common/DisplayModeMenu";
 import FarmerTabBar from "../components/common/FarmerTabBar";
 import ScreenContainer from "../components/common/ScreenContainer";
 import PendingOrdersBanner from "../components/orders/PendingOrdersBanner";
@@ -84,22 +85,7 @@ export default function HomeAgricultorScreen({ navigation }) {
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
-              <TouchableOpacity
-                style={[
-                  styles.logoButton,
-                  {
-                    backgroundColor: display.surface,
-                    borderColor: display.border,
-                  },
-                ]}
-                onPress={() => navigation.navigate("ProfileAgricultor")}
-                activeOpacity={0.85}
-              >
-                <Image
-                  source={ROLE_THEMES.farmer.logo}
-                  style={styles.logoImage}
-                />
-              </TouchableOpacity>
+              <DisplayModeMenu role="farmer" trigger="logo" />
             </View>
           </View>
 
@@ -204,7 +190,7 @@ export default function HomeAgricultorScreen({ navigation }) {
           <View style={styles.sectionHeader}>
             <View>
               <Text style={[styles.sectionTitle, { color: display.text }]}>
-                Ultimos añadidos
+                Últimos añadidos
               </Text>
               <Text
                 style={[styles.sectionSubtitle, { color: display.textSoft }]}

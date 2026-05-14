@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import React, { useState } from "react";
 import {
+  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -9,6 +11,7 @@ import {
   View,
 } from "react-native";
 
+import { useAuth } from "../../context/AuthContext";
 import { useDisplaySettings } from "../../context/DisplaySettingsContext";
 import { getDisplayMode } from "../../styles/displayModes";
 import { ROLE_THEMES } from "../../styles/roleThemes";
@@ -22,6 +25,7 @@ const labels = {
     language: "Idioma",
     spanish: "Español",
     english: "English",
+    switchAccount: "Cerrar sesión / cambiar cuenta",
   },
   en: {
     title: "Display mode",
@@ -31,21 +35,31 @@ const labels = {
     language: "Language",
     spanish: "Español",
     english: "English",
+    switchAccount: "Log out / switch account",
   },
 };
 
-export default function DisplayModeMenu({ role = "user" }) {
+export default function DisplayModeMenu({ role = "user", trigger = "dots" }) {
   const [isOpen, setIsOpen] = useState(false);
+  const navigation = useNavigation();
+  const { logout } = useAuth();
   const { settings, toggleSetting, setLanguage, textScale } = useDisplaySettings();
   const theme = role === "farmer" ? ROLE_THEMES.farmer : ROLE_THEMES.user;
   const display = getDisplayMode(settings, theme);
   const copy = labels[settings.language] || labels.es;
+  const isLogoTrigger = trigger === "logo";
+
+  const handleSwitchAccount = async () => {
+    setIsOpen(false);
+    await logout();
+    navigation.reset({ index: 0, routes: [{ name: "Splash" }] });
+  };
 
   return (
     <>
       <TouchableOpacity
         style={[
-          styles.trigger,
+          isLogoTrigger ? styles.logoTrigger : styles.trigger,
           { backgroundColor: display.surface, borderColor: display.border },
           settings.highContrast && styles.triggerContrast,
         ]}
@@ -53,7 +67,11 @@ export default function DisplayModeMenu({ role = "user" }) {
         activeOpacity={0.8}
         accessibilityLabel={copy.title}
       >
-        <Ionicons name="ellipsis-vertical" size={20} color={display.icon} />
+        {isLogoTrigger ? (
+          <Image source={theme.logo} style={styles.logoImage} />
+        ) : (
+          <Ionicons name="ellipsis-vertical" size={20} color={display.icon} />
+        )}
       </TouchableOpacity>
 
       <Modal visible={isOpen} transparent animationType="fade">
@@ -140,6 +158,16 @@ export default function DisplayModeMenu({ role = "user" }) {
                 flag={<Text style={[styles.flagText, { color: display.text }]}>EN</Text>}
               />
             </View>
+
+            <View style={[styles.divider, { backgroundColor: display.border }]} />
+
+            <MenuAction
+              icon="log-out-outline"
+              label={copy.switchAccount}
+              display={display}
+              textScale={textScale}
+              onPress={handleSwitchAccount}
+            />
           </Pressable>
         </Pressable>
       </Modal>
@@ -173,6 +201,25 @@ const MenuToggle = ({ icon, label, active, display, textScale, onPress }) => (
       size={30}
       color={active ? display.primary : display.textSoft}
     />
+  </TouchableOpacity>
+);
+
+const MenuAction = ({ icon, label, display, textScale, onPress }) => (
+  <TouchableOpacity style={styles.menuRow} onPress={onPress} activeOpacity={0.85}>
+    <View style={[styles.menuIcon, { backgroundColor: display.surfaceAlt }]}>
+      <Ionicons name={icon} size={17} color={display.primary} />
+    </View>
+
+    <Text
+      style={[
+        styles.menuText,
+        { color: display.text, fontSize: 14 * textScale },
+      ]}
+    >
+      {label}
+    </Text>
+
+    <Ionicons name="chevron-forward" size={20} color={display.textSoft} />
   </TouchableOpacity>
 );
 
@@ -217,6 +264,19 @@ const styles = StyleSheet.create({
   },
   triggerContrast: {
     borderWidth: 2,
+  },
+  logoTrigger: {
+    width: 42,
+    height: 42,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  logoImage: {
+    width: 32,
+    height: 32,
+    resizeMode: "contain",
   },
   backdrop: {
     flex: 1,

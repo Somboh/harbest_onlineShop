@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import ClientTabBar from "../components/common/ClientTabBar";
+import DisplayModeMenu from "../components/common/DisplayModeMenu";
 import ScreenContainer from "../components/common/ScreenContainer";
 import { useAuth } from "../context/AuthContext";
 import userService from "../services/userService";
@@ -54,12 +55,7 @@ export default function ProfileScreenUser({ navigation }) {
               </TouchableOpacity>
 
               <View style={styles.headerActions}>
-                <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-                  <Image
-                    source={require("../../assets/images/logo-harbest.png")}
-                    style={styles.headerLogo}
-                  />
-                </TouchableOpacity>
+                <DisplayModeMenu role="user" trigger="logo" />
               </View>
             </View>
 

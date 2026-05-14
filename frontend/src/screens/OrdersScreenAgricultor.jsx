@@ -7,6 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import FarmerTabBar from '../components/common/FarmerTabBar';
 import ScreenContainer from '../components/common/ScreenContainer';
 import { ROLE_THEMES } from '../styles/roleThemes';
 
@@ -190,24 +191,7 @@ export default function OrdersScreenAgricultor({ navigation }) {
           </View>
         </ScrollView>
 
-        {/* BOTTOM BAR */}
-        <View style={styles.bottomBar}>
-          <TouchableOpacity onPress={() => navigation.navigate('Search')}>
-            <Ionicons name="search-outline" size={20} color="#7B7B7B" />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('Favorites')}>
-            <Ionicons name="heart-outline" size={20} color="#7B7B7B" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.activeButton}>
-            <Ionicons name="receipt-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('ProfileAgricultor')}>
-            <Ionicons name="person-outline" size={20} color="#7B7B7B" />
-          </TouchableOpacity>
-        </View>
+        <FarmerTabBar Navigation={navigation} ActiveRoute="OrdersAgricultor" />
       </View>
     </ScreenContainer>
   );
@@ -508,28 +492,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  bottomBar: {
-    position: 'absolute',
-    bottom: 18,
-    left: 24,
-    right: 24,
-    backgroundColor: '#fff',
-    borderRadius: 999,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-
-  activeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.secondary,
-  },
 });

@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 
 import ClientTabBar from "../components/common/ClientTabBar";
+import DisplayModeMenu from "../components/common/DisplayModeMenu";
 import ScreenContainer from "../components/common/ScreenContainer";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -49,20 +50,15 @@ export default function FavoritesScreen({ navigation }) {
               </TouchableOpacity>
 
               <View style={styles.headerActions}>
-                <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-                  <Image
-                    source={require("../../assets/images/logo-harbest.png")}
-                    style={styles.logoImage}
-                  />
-                </TouchableOpacity>
+                <DisplayModeMenu role="user" trigger="logo" />
               </View>
             </View>
 
             <View style={styles.headerTextBlock}>
-              <Text style={styles.headerMiniText}>Tu seleccion guardada</Text>
+              <Text style={styles.headerMiniText}>Tu selección guardada</Text>
               <Text style={styles.headerTitle}>Favoritos</Text>
               <Text style={styles.headerSubtitle}>
-                Accede rapidamente a los productos que mas te interesan y vuelve
+                Accede rápidamente a los productos que más te interesan y vuelve
                 a comprarlos cuando quieras.
               </Text>
             </View>

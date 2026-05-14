@@ -3,7 +3,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +11,8 @@ import {
 } from "react-native";
 
 import ScreenContainer from "../components/common/ScreenContainer";
+import ClientTabBar from "../components/common/ClientTabBar";
+import DisplayModeMenu from "../components/common/DisplayModeMenu";
 import authService from "../services/authService";
 import ordersService, {
   groupOrdersByPurchase,
@@ -68,6 +69,14 @@ export default function OrdersScreen({ navigation }) {
     }, [reload]),
   );
 
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate("Home");
+  };
+
   return (
     <ScreenContainer>
       <View style={styles.container}>
@@ -77,16 +86,11 @@ export default function OrdersScreen({ navigation }) {
         >
           <View style={styles.topSection}>
             <View style={styles.topRow}>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
+              <TouchableOpacity onPress={handleBack}>
                 <Ionicons name="arrow-back" size={22} color="#fff" />
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-                <Image
-                  source={require("../../assets/images/logo-harbest.png")}
-                  style={styles.headerLogo}
-                />
-              </TouchableOpacity>
+              <DisplayModeMenu role="user" trigger="logo" />
             </View>
 
             <View style={styles.headerTextBlock}>
@@ -145,22 +149,7 @@ export default function OrdersScreen({ navigation }) {
           )}
         </ScrollView>
 
-        {!isDesktop && (
-          <View style={styles.bottomBar}>
-            <TouchableOpacity onPress={() => navigation.navigate("Search")}>
-              <Ionicons name="search-outline" size={20} color="#8A8A8A" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate("Favorites")}>
-              <Ionicons name="heart-outline" size={20} color="#8A8A8A" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate("Cart")}>
-              <Ionicons name="cart-outline" size={20} color="#8A8A8A" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate("ProfileUser")}>
-              <Ionicons name="person-outline" size={20} color="#8A8A8A" />
-            </TouchableOpacity>
-          </View>
-        )}
+        <ClientTabBar Navigation={navigation} ActiveRoute="ProfileUser" />
       </View>
     </ScreenContainer>
   );
@@ -325,22 +314,4 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
 
-  bottomBar: {
-    position: "absolute",
-    bottom: 18,
-    left: 32,
-    right: 32,
-    backgroundColor: "#fff",
-    borderRadius: 999,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 6,
-  },
 });

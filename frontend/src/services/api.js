@@ -1,4 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 //URL base del backend. Se configura en app.json → expo.extra.apiBaseUrl.
 //Para desarrollo en local: http://localhost:3000

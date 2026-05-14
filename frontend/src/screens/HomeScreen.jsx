@@ -14,6 +14,7 @@ import {
 import ScreenContainer from "../components/common/ScreenContainer";
 import colors from "../styles/colors";
 import ClientTabBar from "../components/common/ClientTabBar";
+import DisplayModeMenu from "../components/common/DisplayModeMenu";
 import { useCart } from "../context/CartContext";
 import { useDisplaySettings } from "../context/DisplaySettingsContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -117,12 +118,7 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             <View style={styles.headerActions}>
-              <TouchableOpacity onPress={() => navigation.navigate("ProfileUser")}>
-                <Image
-                  source={require("../../assets/images/logo-harbest.png")}
-                  style={styles.logoImage}
-                />
-              </TouchableOpacity>
+              <DisplayModeMenu role="user" trigger="logo" />
             </View>
           </View>
 
