@@ -22,9 +22,6 @@ const labels = {
     darkMode: "Modo noche",
     highContrast: "Alto contraste",
     largeText: "Letra grande",
-    language: "Idioma",
-    spanish: "Español",
-    english: "English",
     switchAccount: "Cerrar sesión / cambiar cuenta",
   },
   en: {
@@ -32,9 +29,6 @@ const labels = {
     darkMode: "Night mode",
     highContrast: "High contrast",
     largeText: "Large text",
-    language: "Language",
-    spanish: "Español",
-    english: "English",
     switchAccount: "Log out / switch account",
   },
 };
@@ -43,7 +37,7 @@ export default function DisplayModeMenu({ role = "user", trigger = "dots" }) {
   const [isOpen, setIsOpen] = useState(false);
   const navigation = useNavigation();
   const { logout } = useAuth();
-  const { settings, toggleSetting, setLanguage, textScale } = useDisplaySettings();
+  const { settings, toggleSetting, textScale } = useDisplaySettings();
   const theme = role === "farmer" ? ROLE_THEMES.farmer : ROLE_THEMES.user;
   const display = getDisplayMode(settings, theme);
   const copy = labels[settings.language] || labels.es;
@@ -131,36 +125,6 @@ export default function DisplayModeMenu({ role = "user", trigger = "dots" }) {
 
             <View style={[styles.divider, { backgroundColor: display.border }]} />
 
-            <Text
-              style={[
-                styles.languageLabel,
-                { color: display.textSoft, fontSize: 12 * textScale },
-              ]}
-            >
-              {copy.language}
-            </Text>
-
-            <View style={styles.languageRow}>
-              <LanguageButton
-                active={settings.language === "es"}
-                display={display}
-                textScale={textScale}
-                label={copy.spanish}
-                onPress={() => setLanguage("es")}
-                flag={<SpainFlag />}
-              />
-              <LanguageButton
-                active={settings.language === "en"}
-                display={display}
-                textScale={textScale}
-                label={copy.english}
-                onPress={() => setLanguage("en")}
-                flag={<Text style={[styles.flagText, { color: display.text }]}>EN</Text>}
-              />
-            </View>
-
-            <View style={[styles.divider, { backgroundColor: display.border }]} />
-
             <MenuAction
               icon="log-out-outline"
               label={copy.switchAccount}
@@ -221,36 +185,6 @@ const MenuAction = ({ icon, label, display, textScale, onPress }) => (
 
     <Ionicons name="chevron-forward" size={20} color={display.textSoft} />
   </TouchableOpacity>
-);
-
-const LanguageButton = ({ active, display, textScale, label, flag, onPress }) => (
-  <TouchableOpacity
-    style={[
-      styles.languageButton,
-      { backgroundColor: display.surfaceAlt, borderColor: display.border },
-      active && { backgroundColor: display.primary, borderColor: display.primary },
-    ]}
-    onPress={onPress}
-    activeOpacity={0.85}
-  >
-    {flag}
-    <Text
-      style={[
-        styles.languageText,
-        { color: active ? "#000" : display.text, fontSize: 13 * textScale },
-      ]}
-    >
-      {label}
-    </Text>
-  </TouchableOpacity>
-);
-
-const SpainFlag = () => (
-  <View style={styles.spainFlag}>
-    <View style={styles.flagRed} />
-    <View style={styles.flagYellow} />
-    <View style={styles.flagRed} />
-  </View>
 );
 
 const styles = StyleSheet.create({
@@ -339,44 +273,5 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     marginVertical: 10,
-  },
-  languageLabel: {
-    fontWeight: "800",
-    marginBottom: 8,
-  },
-  languageRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  languageButton: {
-    flex: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  flagText: {
-    marginBottom: 6,
-    fontWeight: "900",
-  },
-  spainFlag: {
-    width: 24,
-    height: 16,
-    borderRadius: 3,
-    overflow: "hidden",
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.24)",
-  },
-  flagRed: {
-    flex: 1,
-    backgroundColor: "#C60B1E",
-  },
-  flagYellow: {
-    flex: 2,
-    backgroundColor: "#FFC400",
-  },
-  languageText: {
-    fontWeight: "900",
   },
 });

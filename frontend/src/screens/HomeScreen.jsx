@@ -271,7 +271,11 @@ function HomeBrowseContent({ navigation, display, isDesktop, isTablet, recommend
               <Text style={[styles.sectionSubtitle, { color: display.textSoft }]}>Seleccionados para ti</Text>
             </View>
 
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("CategoryAll")}
+              activeOpacity={0.75}
+              hitSlop={8}
+            >
               <Text style={styles.seeAllText}>Ver más</Text>
             </TouchableOpacity>
           </View>
