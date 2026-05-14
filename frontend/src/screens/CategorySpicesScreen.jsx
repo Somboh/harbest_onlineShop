@@ -103,19 +103,6 @@ export default function CategorySpicesScreen({ navigation }) {
             />
           </View>
 
-          {/* FILTROS */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtersRow}
-          >
-            <FilterChip text="Todos" active />
-            <FilterChip text="Ecológico" icon="leaf-outline" />
-            <FilterChip text="Más vendidos" icon="star-outline" />
-            <FilterChip text="Temporada" icon="sunny-outline" />
-            <FilterChip text="Entrega hoy" icon="time-outline" />
-          </ScrollView>
-
           {/* BLOQUE TITULAR */}
           <View style={styles.sectionHeader}>
             <View>
@@ -151,25 +138,6 @@ export default function CategorySpicesScreen({ navigation }) {
     </ScreenContainer>
   );
 }
-
-const FilterChip = ({ text, icon, active }) => (
-  <TouchableOpacity
-    style={[styles.filterChip, active && styles.filterChipActive]}
-    activeOpacity={0.85}
-  >
-    {icon && (
-      <Ionicons
-        name={icon}
-        size={14}
-        color={active ? '#fff' : colors.text}
-        style={styles.filterIcon}
-      />
-    )}
-    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-      {text}
-    </Text>
-  </TouchableOpacity>
-);
 
 const FruitProductCard = ({ navigation, product }) => {
   const { addToCart } = useCart();
@@ -352,39 +320,6 @@ const styles = StyleSheet.create({
     width: 170,
     height: 170,
     resizeMode: 'contain',
-  },
-
-  filtersRow: {
-    paddingBottom: 8,
-    marginBottom: 14,
-  },
-
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    marginRight: 10,
-  },
-
-  filterChipActive: {
-    backgroundColor: "#D7C79A",
-  },
-
-  filterIcon: {
-    marginRight: 6,
-  },
-
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.text,
-  },
-
-  filterChipTextActive: {
-    color: '#fff',
   },
 
   sectionHeader: {
