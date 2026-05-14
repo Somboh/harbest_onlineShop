@@ -1,26 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
-import colors from '../styles/colors';
 import ScreenContainer from '../components/common/ScreenContainer';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { hydrateProducts } from '../data/productAdapter';
 import productsService from '../services/productsService';
+import colors from '../styles/colors';
 import { formatUnitPrice } from '../utils/formatPrice';
 
 export default function CategoryAllScreen({ navigation }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [productsLength, setProductsLength] = useState(0);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [productsSorted, setProductsSorted] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,7 +33,9 @@ export default function CategoryAllScreen({ navigation }) {
       try {
         const raw = await productsService.getProducts();
         if (cancelled) return;
-        setProducts(hydrateProducts(raw));
+        setProducts(hydrateProducts(raw).reverse());
+        setProductsLength(raw.length);
+        setProductsSorted(hydrateProducts(raw).reverse());
       } catch (err) {
         console.error('Error cargando productos:', err);
         if (!cancelled) setProducts([]);
@@ -41,6 +48,28 @@ export default function CategoryAllScreen({ navigation }) {
     };
   }, []);
 
+  const showFilters = () =>{
+    setIsModalVisible(true);
+  }
+  const closeFilters = () =>{
+    setIsModalVisible(false);
+  }
+
+  const handleSort = (type)=>{
+    if(type === 'price_asc'){
+      productsSorted.sort((a,b) => a.price - b.price);
+    }
+    else if(type === 'price_desc'){
+      productsSorted.sort((a,b) => b.price - a.price);
+    }
+    else if(type === 'name_asc'){
+      productsSorted.sort((a,b) => a.name.localeCompare(b.name));
+    }
+    else if(type === 'default'){
+      setProductsSorted(products);
+    }
+    closeFilters();
+  }
   return (
     <ScreenContainer>
       <View style={styles.container}>
@@ -86,7 +115,7 @@ export default function CategoryAllScreen({ navigation }) {
               <View style={styles.heroInfoRow}>
                 <View style={styles.heroInfoPill}>
                   <Ionicons name="leaf" size={14} color={colors.gris} />
-                  <Text style={styles.heroInfoText}>73 productos</Text>
+                  <Text style={styles.heroInfoText}>{productsLength} productos</Text>
                 </View>
 
                 <View style={styles.heroInfoPill}>
@@ -101,6 +130,19 @@ export default function CategoryAllScreen({ navigation }) {
               style={styles.heroImage}
             />
           </View>
+
+          {/* FILTROS
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersRow}
+          >
+            <FilterChip text="Todos" active />
+            <FilterChip text="Ecológico" icon="leaf-outline" />
+            <FilterChip text="Más vendidos" icon="star-outline" />
+            <FilterChip text="Temporada" icon="sunny-outline" />
+            <FilterChip text="Entrega hoy" icon="time-outline" />
+          </ScrollView> */}
 
           {/* BLOQUE TITULAR */}
           <View style={styles.sectionHeader}>
@@ -119,7 +161,7 @@ export default function CategoryAllScreen({ navigation }) {
             <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
           ) : (
             <View style={styles.productsGrid}>
-              {products.map((product) => (
+              {productsSorted.map((product) => (
                 <FruitProductCard
                   key={product.id}
                   navigation={navigation}
@@ -130,10 +172,53 @@ export default function CategoryAllScreen({ navigation }) {
           )}
         </ScrollView>
         {/* BOTÓN FLOTANTE AJUSTES */}
-        <TouchableOpacity style={styles.floatingButton}>
+        <TouchableOpacity style={styles.floatingButton} onPress={showFilters}>
             <Ionicons name="options-outline" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      {/* MODAL DE FILTROS */}
+      <Modal
+          animationType="slide"
+          transparent={true}
+          visible={isModalVisible}
+          onRequestClose={closeFilters} // Maneja el botón de retroceso en Android
+        >
+          {/* Pressable de fondo para cerrar al tocar fuera */}
+          <Pressable style={styles.modalOverlay} onPress={closeFilters}>
+            
+            {/* Contenedor principal del Modal */}
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalHandle} />
+              
+              <Text style={styles.modalTitle}>Ordenar productos</Text>
+
+              {/* Opciones de ordenación */}
+              <TouchableOpacity style={styles.sortOption} onPress={() => handleSort('price_asc')}>
+                <Ionicons name="arrow-up" size={20} color={colors.text} />
+                <Text style={styles.sortOptionText}>Precio: de menor a mayor</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.sortOption} onPress={() => handleSort('price_desc')}>
+                <Ionicons name="arrow-down" size={20} color={colors.text} />
+                <Text style={styles.sortOptionText}>Precio: de mayor a menor</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.sortOption} onPress={() => handleSort('name_asc')}>
+                <Ionicons name="text" size={20} color={colors.text} />
+                <Text style={styles.sortOptionText}>Nombre: A - Z</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.closeModalBtn} onPress={() => handleSort('default')}>
+                <Text style={styles.closeModalBtnText}>Reiniciar Filtros</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.closeModalBtn} onPress={closeFilters}>
+                <Text style={styles.closeModalBtnText}>Cerrar</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Modal>
     </ScreenContainer>
   );
 }
@@ -479,6 +564,71 @@ floatingButton: {
   shadowOpacity: 0.2,
   shadowRadius: 10,
   elevation: 8,
-}
+},
 
+// --- ESTILOS DEL MODAL ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end', // Empuja el contenido hacia abajo
+  },
+
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 24,
+    minHeight: 300,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+
+  modalHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#ccc',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+
+  sortOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+
+  sortOptionText: {
+    fontSize: 16,
+    color: colors.text,
+    marginLeft: 12,
+    fontWeight: '500',
+  },
+
+  closeModalBtn: {
+    marginTop: 30,
+    backgroundColor: colors.gris,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+
+  closeModalBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
 });
