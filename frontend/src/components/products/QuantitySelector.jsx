@@ -21,8 +21,12 @@ export default function QuantitySelector({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={decrease} activeOpacity={0.8}>
-        <Ionicons name="remove" size={18} color={colors.text} />
+      <TouchableOpacity
+        style={[styles.button, styles.secondaryButton]}
+        onPress={decrease}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="remove" size={18} color={colors.primary} />
       </TouchableOpacity>
 
       <Text style={styles.value}>
@@ -56,6 +60,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
+  },
+  secondaryButton: {
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   primaryButton: {
     backgroundColor: colors.primary,

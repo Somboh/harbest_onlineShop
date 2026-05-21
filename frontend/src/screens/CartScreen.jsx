@@ -150,7 +150,8 @@ export default function CartScreen({ navigation }) {
                   disabled={items.length === 0}
                   onPress={() => navigation.navigate("CategoryAll")}
                 >
-                  <Text style={styles.checkoutButtonText}>Continuar compra</Text>
+                  <Ionicons name="basket-outline" size={18} color={colors.primary} />
+                  <Text style={styles.continueButtonText}>Continuar compra</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -159,6 +160,7 @@ export default function CartScreen({ navigation }) {
                   disabled={items.length === 0}
                   onPress={() => navigation.navigate("Checkout")}
                 >
+                  <Ionicons name="card-outline" size={18} color="#fff" />
                   <Text style={styles.checkoutButtonText}>Finalizar compra</Text>
                 </TouchableOpacity>
               </View>
@@ -544,10 +546,18 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   checkoutButton: {
-    backgroundColor: colors.primary,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: colors.secondary,
     borderRadius: 999,
     paddingVertical: 15,
     alignItems: "center",
+    shadowColor: colors.secondary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    elevation: 5,
   },
   disabledButton: {
     opacity: 0.55,
@@ -558,10 +568,20 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   continueButton: {
-    backgroundColor: "#8fa855",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary,
     borderRadius: 999,
     paddingVertical: 15,
     alignItems: "center",
-    marginBottom:12,
-  }
+    marginBottom: 12,
+  },
+  continueButtonText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: "800",
+  },
 });

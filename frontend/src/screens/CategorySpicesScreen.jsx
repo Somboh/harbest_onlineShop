@@ -14,15 +14,20 @@ import {
 
 import ScreenContainer from '../components/common/ScreenContainer';
 import { useCart } from '../context/CartContext';
+import { useDisplaySettings } from '../context/DisplaySettingsContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { hydrateProducts } from '../data/productAdapter';
 import productsService from '../services/productsService';
 import colors from '../styles/colors';
+import { getDisplayMode } from '../styles/displayModes';
+import { ROLE_THEMES } from '../styles/roleThemes';
 import { formatUnitPrice } from '../utils/formatPrice';
 
 const CATEGORY = 'Especias';
 
 export default function CategorySpicesScreen({ navigation }) {
+  const { settings } = useDisplaySettings();
+  const display = getDisplayMode(settings, ROLE_THEMES.user);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [productsLength, setProductsLength] = useState(0);
@@ -74,7 +79,7 @@ export default function CategorySpicesScreen({ navigation }) {
   }
   return (
     <ScreenContainer>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: display.background }]}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           
           {/* HEADER */}
@@ -83,12 +88,12 @@ export default function CategorySpicesScreen({ navigation }) {
               <Ionicons
                 name="arrow-back"
                 size={24}
-                color={colors.text}
+                color={display.text}
                 style={styles.backIcon}
               />
             </TouchableOpacity>
 
-            <Text style={styles.title}>Especias</Text>
+            <Text style={[styles.title, { color: display.text }]}>Especias</Text>
 
             <TouchableOpacity onPress={() => navigation.navigate('Home')}>
               <Image
@@ -99,29 +104,29 @@ export default function CategorySpicesScreen({ navigation }) {
           </View>
 
           {/* HERO DE CATEGORÍA */}
-          <View style={styles.heroCard}>
+          <View style={[styles.heroCard, { backgroundColor: settings.highContrast ? display.surface : '#f1ebc7', borderColor: display.border }]}>
             <View style={styles.heroContent}>
-              <View style={styles.heroBadge}>
-                <Ionicons name="flame" size={14} color="#fff" />
-                <Text style={styles.heroBadgeText}>Categoría</Text>
+              <View style={[styles.heroBadge, { backgroundColor: display.primary }]}>
+                <Ionicons name="flame" size={14} color={settings.highContrast ? '#000' : '#fff'} />
+                <Text style={[styles.heroBadgeText, { color: settings.highContrast ? '#000' : '#fff' }]}>Categoría</Text>
               </View>
 
-              <Text style={styles.heroTitle}>
+              <Text style={[styles.heroTitle, { color: display.text }]}>
                 Especias naturales{'\n'}llenas de sabor
               </Text>
 
-              <Text style={styles.heroSubtitle}>
+              <Text style={[styles.heroSubtitle, { color: display.textSoft }]}>
                 Aromas intensos y auténticos para transformar tus platos, directamente del origen.
               </Text>
               <View style={styles.heroInfoRow}>
-                <View style={styles.heroInfoPill}>
-                  <Ionicons name="leaf" size={14} color="#D7C79A" />
-                  <Text style={styles.heroInfoText}>{productsLength} productos</Text>
+                <View style={[styles.heroInfoPill, { backgroundColor: display.surfaceAlt, borderColor: display.border }]}>
+                  <Ionicons name="leaf" size={14} color={display.primary} />
+                  <Text style={[styles.heroInfoText, { color: display.text }]}>{productsLength} productos</Text>
                 </View>
 
-                <View style={styles.heroInfoPill}>
-                  <Ionicons name="flash-outline" size={14} color="#D7C79A" />
-                  <Text style={styles.heroInfoText}>Entrega rápida</Text>
+                <View style={[styles.heroInfoPill, { backgroundColor: display.surfaceAlt, borderColor: display.border }]}>
+                  <Ionicons name="flash-outline" size={14} color={display.primary} />
+                  <Text style={[styles.heroInfoText, { color: display.text }]}>Entrega rápida</Text>
                 </View>
               </View>
             </View>
@@ -148,12 +153,12 @@ export default function CategorySpicesScreen({ navigation }) {
           {/* BLOQUE TITULAR */}
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Productos destacados</Text>
-              <Text style={styles.sectionSubtitle}>Seleccionados para ti</Text>
+              <Text style={[styles.sectionTitle, { color: display.text }]}>Productos destacados</Text>
+              <Text style={[styles.sectionSubtitle, { color: display.textSoft }]}>Seleccionados para ti</Text>
             </View>
 
-            <TouchableOpacity style={styles.searchButton}>
-            <Ionicons name="search" size={18} color={colors.text} />
+            <TouchableOpacity style={[styles.searchButton, { backgroundColor: display.surface, borderColor: display.border }]}>
+            <Ionicons name="search" size={18} color={display.text} />
             </TouchableOpacity>
           </View>
 
@@ -167,14 +172,16 @@ export default function CategorySpicesScreen({ navigation }) {
                   key={product.id}
                   navigation={navigation}
                   product={product}
+                  display={display}
+                  highContrast={settings.highContrast}
                 />
               ))}
             </View>
           )}
         </ScrollView>
         {/* BOTÓN FLOTANTE AJUSTES */}
-        <TouchableOpacity style={styles.floatingButton} onPress={showFilters}>
-            <Ionicons name="options-outline" size={22} color="#fff" />
+        <TouchableOpacity style={[styles.floatingButton, { backgroundColor: display.primary }]} onPress={showFilters}>
+            <Ionicons name="options-outline" size={22} color={settings.highContrast ? '#000' : '#fff'} />
         </TouchableOpacity>
       </View>
 
@@ -189,33 +196,33 @@ export default function CategorySpicesScreen({ navigation }) {
           <Pressable style={styles.modalOverlay} onPress={closeFilters}>
             
             {/* Contenedor principal del Modal */}
-            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.modalHandle} />
+            <Pressable style={[styles.modalContent, { backgroundColor: display.surface, borderColor: display.border }]} onPress={(e) => e.stopPropagation()}>
+              <View style={[styles.modalHandle, { backgroundColor: display.border }]} />
               
-              <Text style={styles.modalTitle}>Ordenar productos</Text>
+              <Text style={[styles.modalTitle, { color: display.text }]}>Ordenar productos</Text>
 
               {/* Opciones de ordenación */}
-              <TouchableOpacity style={styles.sortOption} onPress={() => handleSort('price_asc')}>
-                <Ionicons name="arrow-up" size={20} color={colors.text} />
-                <Text style={styles.sortOptionText}>Precio: de menor a mayor</Text>
+              <TouchableOpacity style={[styles.sortOption, { borderBottomColor: display.border }]} onPress={() => handleSort('price_asc')}>
+                <Ionicons name="arrow-up" size={20} color={display.text} />
+                <Text style={[styles.sortOptionText, { color: display.text }]}>Precio: de menor a mayor</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.sortOption} onPress={() => handleSort('price_desc')}>
-                <Ionicons name="arrow-down" size={20} color={colors.text} />
-                <Text style={styles.sortOptionText}>Precio: de mayor a menor</Text>
+              <TouchableOpacity style={[styles.sortOption, { borderBottomColor: display.border }]} onPress={() => handleSort('price_desc')}>
+                <Ionicons name="arrow-down" size={20} color={display.text} />
+                <Text style={[styles.sortOptionText, { color: display.text }]}>Precio: de mayor a menor</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.sortOption} onPress={() => handleSort('name_asc')}>
-                <Ionicons name="text" size={20} color={colors.text} />
-                <Text style={styles.sortOptionText}>Nombre: A - Z</Text>
+              <TouchableOpacity style={[styles.sortOption, { borderBottomColor: display.border }]} onPress={() => handleSort('name_asc')}>
+                <Ionicons name="text" size={20} color={display.text} />
+                <Text style={[styles.sortOptionText, { color: display.text }]}>Nombre: A - Z</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.closeModalBtn} onPress={() => handleSort('default')}>
-                <Text style={styles.closeModalBtnText}>Reiniciar Filtros</Text>
+              <TouchableOpacity style={[styles.closeModalBtn, { backgroundColor: display.primary }]} onPress={() => handleSort('default')}>
+                <Text style={[styles.closeModalBtnText, { color: settings.highContrast ? '#000' : '#fff' }]}>Reiniciar Filtros</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.closeModalBtn} onPress={closeFilters}>
-                <Text style={styles.closeModalBtnText}>Cerrar</Text>
+              <TouchableOpacity style={[styles.closeModalBtn, { backgroundColor: display.primary }]} onPress={closeFilters}>
+                <Text style={[styles.closeModalBtnText, { color: settings.highContrast ? '#000' : '#fff' }]}>Cerrar</Text>
               </TouchableOpacity>
             </Pressable>
           </Pressable>
@@ -224,14 +231,14 @@ export default function CategorySpicesScreen({ navigation }) {
   );
 }
 
-const FruitProductCard = ({ navigation, product }) => {
+const FruitProductCard = ({ navigation, product, display, highContrast }) => {
   const { addToCart } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const isFav = isFavorite(product.id);
 
   return (
   <TouchableOpacity
-    style={styles.productCard}
+    style={[styles.productCard, { backgroundColor: display.surface, borderColor: display.border, shadowColor: display.shadow }]}
     activeOpacity={0.9}
     onPress={() => navigation.navigate('ProductDetail', { productId: product.id })}
   >
@@ -239,52 +246,52 @@ const FruitProductCard = ({ navigation, product }) => {
       {product.image ? (
         <Image source={product.image} style={styles.productImage} />
       ) : (
-        <View style={[styles.productImage, styles.productImagePlaceholder]}>
-          <Ionicons name="leaf" size={28} color={colors.primary} />
+        <View style={[styles.productImage, styles.productImagePlaceholder, { backgroundColor: display.primarySoft }]}>
+          <Ionicons name="leaf" size={28} color={display.primary} />
         </View>
       )}
 
       {product.badge ? (
-        <View style={styles.productOverlayBadge}>
-          <Text style={styles.productOverlayBadgeText}>{product.badge}</Text>
+        <View style={[styles.productOverlayBadge, { backgroundColor: display.surface }]}>
+          <Text style={[styles.productOverlayBadgeText, { color: display.primary }]}>{product.badge}</Text>
         </View>
       ) : null}
 
       <TouchableOpacity
-        style={styles.favoriteOverlay}
+        style={[styles.favoriteOverlay, { backgroundColor: display.surface }]}
         onPress={() => toggleFavorite(product)}
         activeOpacity={0.85}
       >
         <Ionicons
           name={isFav ? 'heart' : 'heart-outline'}
           size={16}
-          color={colors.primary}
+          color={display.primary}
         />
       </TouchableOpacity>
     </View>
 
     <View style={styles.productContent}>
-      <Text style={styles.productName} numberOfLines={1}>
+      <Text style={[styles.productName, { color: display.text }]} numberOfLines={1}>
         {product.name}
       </Text>
-      <Text style={styles.productSeller} numberOfLines={1}>
+      <Text style={[styles.productSeller, { color: display.textSoft }]} numberOfLines={1}>
         {product.seller}
       </Text>
 
       <View style={styles.productFooter}>
-        <Text style={styles.productPrice}>
+        <Text style={[styles.productPrice, { color: display.primary }]}>
           {formatUnitPrice(product.price, product.unit)}
         </Text>
 
         <TouchableOpacity
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: display.primary }]}
           onPress={() => {
             addToCart(product, 1);
             navigation.navigate('Cart');
           }}
           activeOpacity={0.85}
         >
-          <Ionicons name="add" size={16} color="#fff" />
+          <Ionicons name="add" size={16} color={highContrast ? '#000' : '#fff'} />
         </TouchableOpacity>
       </View>
     </View>
@@ -328,6 +335,7 @@ const styles = StyleSheet.create({
 
   heroCard: {
     backgroundColor: '#f1ebc7',
+    borderWidth: 1,
     borderRadius: 30,
     padding: 20,
     marginBottom: 18,
@@ -384,6 +392,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.72)',
+    borderWidth: 1,
+    borderColor: 'transparent',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -444,6 +454,8 @@ const styles = StyleSheet.create({
   productCard: {
     width: '48%',
     backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'transparent',
     borderRadius: 22,
     overflow: 'hidden',
     marginBottom: 14,
@@ -576,6 +588,7 @@ floatingButton: {
 
   modalContent: {
     backgroundColor: '#fff',
+    borderWidth: 1,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 24,

@@ -289,7 +289,11 @@ export default function CheckoutScreen({ navigation }) {
                 ) : null}
 
                 <TouchableOpacity
-                  style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]}
+                  style={[
+                    styles.primaryButton,
+                    styles.paymentButton,
+                    submitting && styles.primaryButtonDisabled,
+                  ]}
                   onPress={handleFinalize}
                   disabled={submitting}
                   activeOpacity={0.85}
@@ -297,7 +301,10 @@ export default function CheckoutScreen({ navigation }) {
                   {submitting ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.primaryButtonText}>Finalizar compra</Text>
+                    <>
+                      <Ionicons name="card-outline" size={18} color="#fff" />
+                      <Text style={styles.primaryButtonText}>Pagar pedido</Text>
+                    </>
                   )}
                 </TouchableOpacity>
               </View>
@@ -434,6 +441,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minHeight: 48,
     justifyContent: "center",
+  },
+  paymentButton: {
+    flexDirection: "row",
+    gap: 8,
+    backgroundColor: colors.secondary,
+    shadowColor: colors.secondary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
   },
   primaryButtonDisabled: { opacity: 0.6 },
   primaryButtonText: { color: "#fff", fontSize: 15, fontWeight: "800" },
