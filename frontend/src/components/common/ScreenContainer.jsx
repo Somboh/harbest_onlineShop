@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   //Layout desktop: ocupa el resto del ancho, con un máximo razonable y centrado.
   innerDesktop: {
     maxWidth: 1200,
-    alignSelf: 'center',
+    //alignSelf: 'center',
     marginLeft: SIDEBAR_WIDTH_PX,
     paddingHorizontal: 24,
   },
