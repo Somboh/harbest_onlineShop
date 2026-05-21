@@ -1,4 +1,4 @@
-import React from "react";
+import { Ionicons } from "@expo/vector-icons";
 import {
   Image,
   ScrollView,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 
 import ClientTabBar from "../components/common/ClientTabBar";
 import DisplayModeMenu from "../components/common/DisplayModeMenu";
@@ -146,12 +145,21 @@ export default function CartScreen({ navigation }) {
                 </View>
 
                 <TouchableOpacity
+                  style={[styles.continueButton, items.length === 0 && styles.disabledButton]}
+                  activeOpacity={0.85}
+                  disabled={items.length === 0}
+                  onPress={() => navigation.navigate("CategoryAll")}
+                >
+                  <Text style={styles.checkoutButtonText}>Continuar compra</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   style={[styles.checkoutButton, items.length === 0 && styles.disabledButton]}
                   activeOpacity={0.85}
                   disabled={items.length === 0}
                   onPress={() => navigation.navigate("Checkout")}
                 >
-                  <Text style={styles.checkoutButtonText}>Continuar compra</Text>
+                  <Text style={styles.checkoutButtonText}>Finalizar compra</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -549,4 +557,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
   },
+  continueButton: {
+    backgroundColor: "#8fa855",
+    borderRadius: 999,
+    paddingVertical: 15,
+    alignItems: "center",
+    marginBottom:12,
+  }
 });
